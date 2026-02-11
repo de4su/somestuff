@@ -7,10 +7,20 @@ interface GameCardProps {
 
 const GameCard: React.FC<GameCardProps> = ({ game }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const intervalRef = useRef<number | null>(null);
 
   const staticImage = `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/header.jpg`;
-  const videoTrailer = `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/microtrailer.mp4`;
+  
+  // Steam screenshots - these exist for almost all games
+  const screenshots = [
+    `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.steamAppId}/ss_1.1920x1080.jpg`,
+    `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.steamAppId}/ss_2.1920x1080.jpg`,
+    `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.steamAppId}/ss_3.1920x1080.jpg`,
+    `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.steamAppId}/ss_4.1920x1080.jpg`,
+    `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.steamAppId}/ss_5.1920x1080.jpg`,
+  ];
+  
   const storeUrl = `https://store.steampowered.com/app/${game.steamAppId}`;
 
   const getScoreColor = (score: number) => {
@@ -25,13 +35,27 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
   };
 
   useEffect(() => {
-    if (isHovered && videoRef.current) {
-      videoRef.current.play().catch(err => console.debug("Autoplay prevented:", err));
-    } else if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0;
+    if (isHovered) {
+      intervalRef.current = window.setInterval(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % screenshots.length);
+      }, 1000);
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      setCurrentImageIndex(0);
     }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
   }, [isHovered]);
+
+  const getCurrentImage = () => {
+    return isHovered ? screenshots[currentImageIndex] : staticImage;
+  };
 
   return (
     <div 
@@ -41,23 +65,16 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
       onClick={handleCardClick}
     >
       <div className="relative h-56 w-full overflow-hidden bg-black">
-        <div className="w-full h-full relative">
-          <img 
-            src={staticImage} 
-            alt={game.title}
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isHovered ? 'opacity-0' : 'opacity-100'}`}
-            loading="lazy"
-          />
-          <video 
-            ref={videoRef}
-            src={videoTrailer}
-            muted
-            loop
-            playsInline
-            preload="auto"
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
-          />
-        </div>
+        <img 
+          src={getCurrentImage()}
+          alt={game.title}
+          className="w-full h-full object-cover"
+          loading="lazy"
+          onError={(e) => {
+            // Fallback to header image if screenshot fails
+            e.currentTarget.src = staticImage;
+          }}
+        />
         
         <div className={`absolute top-0 left-0 m-4 px-3 py-1.5 rounded border-2 text-base font-black z-10 shadow-2xl backdrop-blur-md ${getScoreColor(game.suitabilityScore)}`}>
           {game.suitabilityScore}%
