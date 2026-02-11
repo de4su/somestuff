@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { GameRecommendation } from '../types.ts';
 
 interface GameCardProps {
@@ -7,19 +7,8 @@ interface GameCardProps {
 
 const GameCard: React.FC<GameCardProps> = ({ game }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const intervalRef = useRef<number | null>(null);
 
   const staticImage = `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/header.jpg`;
-  
-  const screenshots = [
-    `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/ss_1.600x338.jpg`,
-    `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/ss_2.600x338.jpg`,
-    `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/ss_3.600x338.jpg`,
-    `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/ss_4.600x338.jpg`,
-    `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/ss_5.600x338.jpg`,
-  ];
-  
   const storeUrl = `https://store.steampowered.com/app/${game.steamAppId}`;
 
   const getScoreColor = (score: number) => {
@@ -33,26 +22,6 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
     window.open(storeUrl, '_blank');
   };
 
-  useEffect(() => {
-    if (isHovered) {
-      intervalRef.current = window.setInterval(() => {
-        setCurrentImageIndex((prev) => (prev + 1) % screenshots.length);
-      }, 1000);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      setCurrentImageIndex(0);
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [isHovered, screenshots.length]);
-
   return (
     <div 
       className="steam-card rounded-lg overflow-hidden flex flex-col h-full group border border-white/5 hover:border-blue-500/30 cursor-pointer shadow-lg"
@@ -61,20 +30,12 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
       onClick={handleCardClick}
     >
       <div className="relative h-56 w-full overflow-hidden bg-black">
-        <div className="w-full h-full relative">
-          <img 
-            src={staticImage} 
-            alt={game.title}
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isHovered ? 'opacity-0' : 'opacity-100'}`}
-            loading="lazy"
-          />
-          <img 
-            src={screenshots[currentImageIndex]}
-            alt={`${game.title} screenshot ${currentImageIndex + 1}`}
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
-            loading="lazy"
-          />
-        </div>
+        <img 
+          src={staticImage} 
+          alt={game.title}
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
         
         <div className={`absolute top-0 left-0 m-4 px-3 py-1.5 rounded border-2 text-base font-black z-10 shadow-2xl backdrop-blur-md ${getScoreColor(game.suitabilityScore)}`}>
           {game.suitabilityScore}%
