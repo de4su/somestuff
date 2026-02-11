@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { GameRecommendation } from '../types.ts';
 
@@ -8,6 +7,7 @@ interface GameCardProps {
 
 const GameCard: React.FC<GameCardProps> = ({ game }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [hasVideo, setHasVideo] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const staticImage = `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/header.jpg`;
@@ -26,13 +26,19 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
   };
 
   useEffect(() => {
-    if (isHovered && videoRef.current) {
-      videoRef.current.play().catch(err => console.debug("Autoplay prevented:", err));
+    if (isHovered && videoRef.current && hasVideo) {
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          console.debug("Autoplay prevented:", err);
+          setHasVideo(false);
+        });
+      }
     } else if (videoRef.current) {
       videoRef.current.pause();
       videoRef.current.currentTime = 0;
     }
-  }, [isHovered]);
+  }, [isHovered, hasVideo]);
 
   return (
     <div 
@@ -46,17 +52,26 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
           <img 
             src={staticImage} 
             alt={game.title}
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isHovered ? 'opacity-0' : 'opacity-100'}`}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isHovered && hasVideo ? 'opacity-0' : 'opacity-100'}`}
             loading="lazy"
           />
-          <video 
-            ref={videoRef}
-            src={videoTrailer}
-            muted
-            loop
-            playsInline
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
-          />
+          {hasVideo && (
+            <video 
+              ref={videoRef}
+              src={videoTrailer}
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              onError={() => setHasVideo(false)}
+              onLoadedData={() => {
+                if (isHovered && videoRef.current) {
+                  videoRef.current.play().catch(() => setHasVideo(false));
+                }
+              }}
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
+            />
+          )}
         </div>
         
         <div className={`absolute top-0 left-0 m-4 px-3 py-1.5 rounded border-2 text-base font-black z-10 shadow-2xl backdrop-blur-md ${getScoreColor(game.suitabilityScore)}`}>
