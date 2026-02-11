@@ -1,0 +1,62 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <title>SteamQuest</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1b2838; /* Steam dark blue */
+            color: #c7d5e0;
+        }
+        .steam-gradient {
+            background: linear-gradient(135deg, #171a21 0%, #1b2838 100%);
+        }
+        .steam-card {
+            background-color: rgba(22, 32, 45, 0.8);
+            border: 1px solid rgba(102, 192, 244, 0.05);
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+        .steam-card:hover {
+            border-color: rgba(102, 192, 244, 0.2);
+            transform: translateY(-8px);
+            background-color: rgba(30, 44, 62, 0.9);
+            box-shadow: 0 20px 40px -15px rgba(0,0,0,0.5);
+        }
+        .font-stats {
+            font-family: 'Space Mono', monospace;
+        }
+        .blue-glow {
+            box-shadow: 0 0 30px rgba(102, 192, 244, 0.15);
+        }
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.98) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .animate-results {
+            animation: fadeInScale 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+        }
+        video {
+            object-fit: cover;
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4",
+    "@google/genai": "https://esm.sh/@google/genai@^1.40.0"
+  }
+}
+</script>
+</head>
+<body>
+    <div id="root"></div>
+</body>
+</html>
