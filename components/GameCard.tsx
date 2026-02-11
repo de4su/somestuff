@@ -12,12 +12,13 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
 
   const staticImage = `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/header.jpg`;
   
+  // Try different Steam screenshot URL formats
   const screenshots = [
-    `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.steamAppId}/ss_1.1920x1080.jpg`,
-    `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.steamAppId}/ss_2.1920x1080.jpg`,
-    `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.steamAppId}/ss_3.1920x1080.jpg`,
-    `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.steamAppId}/ss_4.1920x1080.jpg`,
-    `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.steamAppId}/ss_5.1920x1080.jpg`,
+    `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/ss_1.600x338.jpg`,
+    `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/ss_2.600x338.jpg`,
+    `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/ss_3.600x338.jpg`,
+    `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/ss_4.600x338.jpg`,
+    `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/ss_5.600x338.jpg`,
   ];
   
   const storeUrl = `https://store.steampowered.com/app/${game.steamAppId}`;
@@ -71,6 +72,10 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
           <img 
             src={screenshots[currentImageIndex]}
             alt={`${game.title} screenshot ${currentImageIndex + 1}`}
+            onError={(e) => {
+              // If screenshot fails, show the header image
+              e.currentTarget.src = staticImage;
+            }}
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
             loading="lazy"
           />
