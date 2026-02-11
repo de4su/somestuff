@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { QuizAnswers, RecommendationResponse, GameRecommendation } from "../types.ts";
 
@@ -39,10 +38,9 @@ const GAME_SCHEMA = {
 };
 
 export const getGameRecommendations = async (answers: QuizAnswers): Promise<RecommendationResponse> => {
-  // Initialize right before use to ensure process.env is available in the browser context if polyfilled by Vercel
-  const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : '';
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
   if (!apiKey) {
-    throw new Error("API_KEY is missing. Please set it in Vercel Environment Variables.");
+    throw new Error("API_KEY is missing. Please set VITE_GEMINI_API_KEY in Vercel Environment Variables.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -73,7 +71,7 @@ export const getGameRecommendations = async (answers: QuizAnswers): Promise<Reco
 };
 
 export const searchSpecificGame = async (query: string): Promise<GameRecommendation> => {
-  const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : '';
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
   if (!apiKey) throw new Error("API_KEY missing.");
 
   const ai = new GoogleGenAI({ apiKey });
