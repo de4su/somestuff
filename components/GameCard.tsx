@@ -12,7 +12,6 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
 
   const staticImage = `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/header.jpg`;
   
-  // Try different Steam screenshot URL formats
   const screenshots = [
     `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/ss_1.600x338.jpg`,
     `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/ss_2.600x338.jpg`,
@@ -72,10 +71,6 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
           <img 
             src={screenshots[currentImageIndex]}
             alt={`${game.title} screenshot ${currentImageIndex + 1}`}
-            onError={(e) => {
-              // If screenshot fails, show the header image
-              e.currentTarget.src = staticImage;
-            }}
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
             loading="lazy"
           />
