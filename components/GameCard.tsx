@@ -12,7 +12,6 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
 
   const staticImage = `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/header.jpg`;
   
-  // Steam screenshots - these exist for almost all games
   const screenshots = [
     `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.steamAppId}/ss_1.1920x1080.jpg`,
     `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.steamAppId}/ss_2.1920x1080.jpg`,
@@ -42,6 +41,7 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
       setCurrentImageIndex(0);
     }
@@ -51,11 +51,7 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isHovered]);
-
-  const getCurrentImage = () => {
-    return isHovered ? screenshots[currentImageIndex] : staticImage;
-  };
+  }, [isHovered, screenshots.length]);
 
   return (
     <div 
@@ -65,16 +61,20 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
       onClick={handleCardClick}
     >
       <div className="relative h-56 w-full overflow-hidden bg-black">
-        <img 
-          src={getCurrentImage()}
-          alt={game.title}
-          className="w-full h-full object-cover"
-          loading="lazy"
-          onError={(e) => {
-            // Fallback to header image if screenshot fails
-            e.currentTarget.src = staticImage;
-          }}
-        />
+        <div className="w-full h-full relative">
+          <img 
+            src={staticImage} 
+            alt={game.title}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isHovered ? 'opacity-0' : 'opacity-100'}`}
+            loading="lazy"
+          />
+          <img 
+            src={screenshots[currentImageIndex]}
+            alt={`${game.title} screenshot ${currentImageIndex + 1}`}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
+            loading="lazy"
+          />
+        </div>
         
         <div className={`absolute top-0 left-0 m-4 px-3 py-1.5 rounded border-2 text-base font-black z-10 shadow-2xl backdrop-blur-md ${getScoreColor(game.suitabilityScore)}`}>
           {game.suitabilityScore}%
