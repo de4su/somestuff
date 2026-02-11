@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { QuizAnswers } from '../types';
+import { QuizAnswers } from '../types.ts';
 
 interface QuizProps {
   onComplete: (answers: QuizAnswers) => void;
@@ -31,113 +31,120 @@ const Quiz: React.FC<QuizProps> = ({ onComplete }) => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto steam-card p-8 rounded-xl blue-glow">
+    <div className="max-w-2xl mx-auto steam-card p-8 rounded-xl blue-glow animate-in fade-in duration-700">
       <div className="mb-8">
-        <div className="flex justify-between text-sm text-blue-400 mb-2">
-          <span>Step {step + 1} of 4</span>
-          <span>{Math.round(((step + 1) / 4) * 100)}%</span>
+        <div className="flex justify-between text-xs font-black text-blue-500 mb-3 tracking-widest uppercase">
+          <span>Phase {step + 1} of 4</span>
+          <span>{Math.round(((step + 1) / 4) * 100)}% Synchronized</span>
         </div>
-        <div className="w-full bg-gray-800 h-1 rounded-full">
+        <div className="w-full bg-gray-800/50 h-1.5 rounded-full overflow-hidden border border-white/5">
           <div 
-            className="bg-blue-500 h-full rounded-full transition-all duration-300" 
+            className="bg-gradient-to-r from-blue-600 to-blue-400 h-full transition-all duration-500 ease-out" 
             style={{ width: `${((step + 1) / 4) * 100}%` }}
           ></div>
         </div>
       </div>
 
-      {step === 0 && (
-        <div className="animate-in fade-in duration-500">
-          <h2 className="text-2xl font-bold mb-6 text-white">What genres do you love?</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
-            {GENRES.map(genre => (
-              <button
-                key={genre}
-                onClick={() => toggleGenre(genre)}
-                className={`p-3 rounded-md border text-sm transition-all ${
-                  answers.preferredGenres.includes(genre)
-                    ? 'bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-500/20'
-                    : 'bg-gray-800/50 border-gray-700 text-gray-400 hover:border-gray-500'
-                }`}
-              >
-                {genre}
-              </button>
-            ))}
+      <div className="min-h-[300px]">
+        {step === 0 && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+            <h2 className="text-3xl font-black mb-2 text-white uppercase tracking-tight">Select Categories</h2>
+            <p className="text-gray-400 mb-8 text-sm">Choose the genres that define your typical library.</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
+              {GENRES.map(genre => (
+                <button
+                  key={genre}
+                  onClick={() => toggleGenre(genre)}
+                  className={`p-3 rounded-sm border text-xs font-bold transition-all duration-200 uppercase tracking-wider ${
+                    answers.preferredGenres.includes(genre)
+                      ? 'bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-500/20 scale-[1.02]'
+                      : 'bg-gray-800/30 border-white/5 text-gray-500 hover:border-gray-600 hover:text-gray-300'
+                  }`}
+                >
+                  {genre}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {step === 1 && (
-        <div className="animate-in fade-in duration-500">
-          <h2 className="text-2xl font-bold mb-6 text-white">What's your gaming playstyle?</h2>
-          <div className="space-y-4 mb-8">
-            {['casual', 'balanced', 'hardcore'].map((style) => (
-              <button
-                key={style}
-                onClick={() => setAnswers({...answers, playstyle: style as any})}
-                className={`w-full p-4 rounded-lg border text-left transition-all ${
-                  answers.playstyle === style
-                    ? 'bg-blue-600 border-blue-400 text-white'
-                    : 'bg-gray-800/50 border-gray-700 text-gray-400'
-                }`}
-              >
-                <div className="capitalize font-bold mb-1">{style}</div>
-                <div className="text-xs opacity-80">
-                  {style === 'casual' && "I play to relax and enjoy the story."}
-                  {style === 'balanced' && "I like a bit of a challenge but nothing too crazy."}
-                  {style === 'hardcore' && "I live for high skill ceilings and mastery."}
-                </div>
-              </button>
-            ))}
+        {step === 1 && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+            <h2 className="text-3xl font-black mb-2 text-white uppercase tracking-tight">Playstyle Profile</h2>
+            <p className="text-gray-400 mb-8 text-sm">How do you prefer to interact with game mechanics?</p>
+            <div className="space-y-4 mb-8">
+              {['casual', 'balanced', 'hardcore'].map((style) => (
+                <button
+                  key={style}
+                  onClick={() => setAnswers({...answers, playstyle: style as any})}
+                  className={`w-full p-5 rounded-sm border text-left transition-all group ${
+                    answers.playstyle === style
+                      ? 'bg-blue-600 border-blue-400 text-white'
+                      : 'bg-gray-800/30 border-white/5 text-gray-500 hover:border-gray-600'
+                  }`}
+                >
+                  <div className={`capitalize font-black text-lg mb-1 tracking-tight ${answers.playstyle === style ? 'text-white' : 'group-hover:text-gray-300'}`}>
+                    {style}
+                  </div>
+                  <div className="text-xs opacity-70 font-medium">
+                    {style === 'casual' && "Focus on relaxation, aesthetics, and low-friction storytelling."}
+                    {style === 'balanced' && "Enjoy meaningful challenges with a steady learning curve."}
+                    {style === 'hardcore' && "Demand precision, depth, and punishingly rewarding mastery."}
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {step === 2 && (
-        <div className="animate-in fade-in duration-500">
-          <h2 className="text-2xl font-bold mb-6 text-white">How much time do you have?</h2>
-          <div className="grid grid-cols-1 gap-4 mb-8">
-            {[
-              { id: 'short', label: 'Coffee Breaks (< 15 hrs)', desc: 'I prefer concise, impactful experiences.' },
-              { id: 'medium', label: 'Weekend Warrior (15 - 50 hrs)', desc: 'Give me a world I can spend a few weeks in.' },
-              { id: 'long', label: 'Life Commitment (50+ hrs)', desc: 'I want to get lost in a massive universe.' }
-            ].map((time) => (
-              <button
-                key={time.id}
-                onClick={() => setAnswers({...answers, timeAvailability: time.id as any})}
-                className={`p-4 rounded-lg border text-left transition-all ${
-                  answers.timeAvailability === time.id
-                    ? 'bg-blue-600 border-blue-400 text-white'
-                    : 'bg-gray-800/50 border-gray-700 text-gray-400'
-                }`}
-              >
-                <div className="font-bold">{time.label}</div>
-                <div className="text-xs opacity-80">{time.desc}</div>
-              </button>
-            ))}
+        {step === 2 && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+            <h2 className="text-3xl font-black mb-2 text-white uppercase tracking-tight">Temporal Allocation</h2>
+            <p className="text-gray-400 mb-8 text-sm">How much time can you commit to a single title?</p>
+            <div className="grid grid-cols-1 gap-4 mb-8">
+              {[
+                { id: 'short', label: 'Bite-Sized (< 15 hrs)', desc: 'High-impact, concise experiences that respect your time.' },
+                { id: 'medium', label: 'Standard (15 - 50 hrs)', desc: 'Deep narratives or systems designed for several weeks of play.' },
+                { id: 'long', label: 'Epic (50+ hrs)', desc: 'Infinite loops or massive worlds for long-term immersion.' }
+              ].map((time) => (
+                <button
+                  key={time.id}
+                  onClick={() => setAnswers({...answers, timeAvailability: time.id as any})}
+                  className={`p-5 rounded-sm border text-left transition-all ${
+                    answers.timeAvailability === time.id
+                      ? 'bg-blue-600 border-blue-400 text-white'
+                      : 'bg-gray-800/30 border-white/5 text-gray-500 hover:border-gray-600'
+                  }`}
+                >
+                  <div className="font-black text-lg tracking-tight uppercase">{time.label}</div>
+                  <div className="text-xs opacity-70 font-medium">{time.desc}</div>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {step === 3 && (
-        <div className="animate-in fade-in duration-500">
-          <h2 className="text-2xl font-bold mb-2 text-white">Any final preferences?</h2>
-          <p className="text-sm text-gray-400 mb-6">Mention specific themes, settings (e.g., Cyberpunk, Fantasy), or "souls-like".</p>
-          <textarea
-            className="w-full bg-gray-900 border border-gray-700 rounded-lg p-4 text-white focus:outline-none focus:border-blue-500 mb-8 h-32"
-            placeholder="Type anything else you're looking for..."
-            value={answers.specificKeywords}
-            onChange={(e) => setAnswers({...answers, specificKeywords: e.target.value})}
-          />
-        </div>
-      )}
+        {step === 3 && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+            <h2 className="text-3xl font-black mb-2 text-white uppercase tracking-tight">Specific Directives</h2>
+            <p className="text-gray-400 mb-8 text-sm">Mention themes, settings, or specific 'vibes' (e.g., Cyberpunk, Retro, Dark).</p>
+            <textarea
+              className="w-full bg-black/40 border border-white/10 rounded-sm p-5 text-white focus:outline-none focus:border-blue-500 mb-8 h-40 font-medium placeholder:text-gray-700 transition-colors"
+              placeholder="E.g. I want something with a deep loot system and a depressing atmosphere..."
+              value={answers.specificKeywords}
+              onChange={(e) => setAnswers({...answers, specificKeywords: e.target.value})}
+            />
+          </div>
+        )}
+      </div>
 
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center pt-6 border-t border-white/5">
         {step > 0 ? (
           <button 
             onClick={prevStep}
-            className="px-6 py-2 text-gray-400 hover:text-white transition-colors"
+            className="px-8 py-3 text-xs font-black text-gray-500 hover:text-white transition-colors uppercase tracking-widest"
           >
-            Back
+            Previous
           </button>
         ) : (
           <div></div>
@@ -147,20 +154,20 @@ const Quiz: React.FC<QuizProps> = ({ onComplete }) => {
           <button 
             onClick={nextStep}
             disabled={step === 0 && answers.preferredGenres.length === 0}
-            className={`px-8 py-3 rounded-md font-bold transition-all ${
+            className={`px-10 py-4 rounded-sm font-black text-sm uppercase tracking-widest transition-all ${
               step === 0 && answers.preferredGenres.length === 0
-              ? 'bg-gray-700 cursor-not-allowed text-gray-500'
-              : 'bg-blue-500 hover:bg-blue-400 text-white blue-glow'
+              ? 'bg-gray-800 cursor-not-allowed text-gray-600'
+              : 'bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-600/20 active:scale-95'
             }`}
           >
-            Continue
+            Advance
           </button>
         ) : (
           <button 
             onClick={() => onComplete(answers)}
-            className="px-10 py-4 bg-green-600 hover:bg-green-500 text-white rounded-md font-bold blue-glow transition-all"
+            className="px-12 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-sm font-black text-sm uppercase tracking-widest shadow-2xl shadow-blue-600/30 transition-all active:scale-95"
           >
-            Reveal My Games
+            Initialize Recommendations
           </button>
         )}
       </div>

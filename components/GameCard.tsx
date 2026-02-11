@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { GameRecommendation } from '../types';
+import { GameRecommendation } from '../types.ts';
 
 interface GameCardProps {
   game: GameRecommendation;
@@ -10,8 +10,6 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
   const [isHovered, setIsHovered] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Official Steam asset URLs based on App ID
-  // Using header.jpg for the static image and microtrailer.mp4 for the video
   const staticImage = `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/header.jpg`;
   const videoTrailer = `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/microtrailer.mp4`;
   const storeUrl = `https://store.steampowered.com/app/${game.steamAppId}`;
@@ -44,7 +42,6 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
       onClick={handleCardClick}
     >
       <div className="relative h-56 w-full overflow-hidden bg-black">
-        {/* Media Container */}
         <div className="w-full h-full relative">
           <img 
             src={staticImage} 
@@ -52,7 +49,6 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isHovered ? 'opacity-0' : 'opacity-100'}`}
             loading="lazy"
           />
-          {/* We keep the video rendered but controlled for smoother transitions */}
           <video 
             ref={videoRef}
             src={videoTrailer}
@@ -63,7 +59,6 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
           />
         </div>
         
-        {/* Suitability Percentage - Top-Left Corner */}
         <div className={`absolute top-0 left-0 m-4 px-3 py-1.5 rounded border-2 text-base font-black z-10 shadow-2xl backdrop-blur-md ${getScoreColor(game.suitabilityScore)}`}>
           {game.suitabilityScore}%
         </div>
@@ -72,15 +67,13 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
       </div>
       
       <div className="p-6 flex flex-col flex-grow">
-        <h3 className="text-2xl font-black text-white group-hover:text-blue-400 transition-colors mb-6 tracking-tight leading-none">
-          {game.title.toUpperCase()}
+        <h3 className="text-2xl font-black text-white group-hover:text-blue-400 transition-colors mb-6 tracking-tight leading-none uppercase">
+          {game.title}
         </h3>
 
-        {/* HLTB Stats: Main (Left), Completionist (Right) */}
         <div className="flex justify-between items-center mb-6">
-          {/* Main Story - Left */}
-          <div className="flex items-center gap-3 group/stat">
-            <div className="bg-blue-500/10 p-2.5 rounded-lg border border-blue-500/20 group-hover/stat:border-blue-500/50 transition-colors">
+          <div className="flex items-center gap-3">
+            <div className="bg-blue-500/10 p-2.5 rounded-lg border border-blue-500/20">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -93,13 +86,12 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
 
           <div className="h-12 w-[1px] bg-white/5 mx-2"></div>
 
-          {/* Completionist - Right */}
-          <div className="flex items-center gap-3 text-right group/stat">
+          <div className="flex items-center gap-3 text-right">
             <div className="flex flex-col items-end">
               <span className="text-[10px] text-gray-500 uppercase font-black tracking-[0.2em] leading-none mb-1.5">COMPLETIONIST</span>
               <span className="text-3xl font-stats text-purple-300 leading-none">{game.completionistTime}<span className="text-sm ml-1 text-purple-500/50">h</span></span>
             </div>
-            <div className="bg-purple-500/10 p-2.5 rounded-lg border border-purple-500/20 group-hover/stat:border-purple-500/50 transition-colors">
+            <div className="bg-purple-500/10 p-2.5 rounded-lg border border-purple-500/20">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
               </svg>
@@ -107,12 +99,10 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
           </div>
         </div>
 
-        {/* Short Description */}
         <p className="text-sm text-gray-400 line-clamp-2 mb-6 font-medium leading-relaxed italic opacity-80">
           "{game.description}"
         </p>
 
-        {/* Curator Pick Reason / Community Sentiment */}
         <div className="mt-auto pt-5 border-t border-white/5">
           <div className="flex gap-4">
             <div className="shrink-0 mt-1">

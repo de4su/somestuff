@@ -1,12 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { QuizAnswers, RecommendationResponse, GameRecommendation } from "../types";
-
-// This pulls the key from Vercel's Environment Variables safely.
-// Do NOT paste your key here.
-const API_KEY = process.env.API_KEY;
-
-const ai = new GoogleGenAI({ apiKey: API_KEY || '' });
+import { QuizAnswers, RecommendationResponse, GameRecommendation } from "../types.ts";
 
 const GAME_SCHEMA = {
   type: Type.OBJECT,
@@ -45,13 +39,17 @@ const GAME_SCHEMA = {
 };
 
 export const getGameRecommendations = async (answers: QuizAnswers): Promise<RecommendationResponse> => {
-  if (!API_KEY) {
+  // Initialize right before use to ensure process.env is available in the browser context if polyfilled by Vercel
+  const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : '';
+  if (!apiKey) {
     throw new Error("API_KEY is missing. Please set it in Vercel Environment Variables.");
   }
 
-  const prompt = `Act as a world-class Steam curator. Suggest 6 real video games.
+  const ai = new GoogleGenAI({ apiKey });
+
+  const prompt = `Act as a world-class Steam curator. Suggest 6 real video games available on Steam.
     Genres: ${answers.preferredGenres.join(', ')}, Playstyle: ${answers.playstyle}, Time: ${answers.timeAvailability}, Keywords: ${answers.specificKeywords}.
-    Identify correct Steam App IDs. Estimate playtimes. Calculate suitabilityScore (0-100).`;
+    Identify correct Steam App IDs. Estimate playtimes for main story and completionist. Calculate suitabilityScore (0-100).`;
 
   try {
     const response = await ai.models.generateContent({
@@ -70,14 +68,17 @@ export const getGameRecommendations = async (answers: QuizAnswers): Promise<Reco
     };
   } catch (err) {
     console.error("Gemini Error:", err);
-    return { recommendations: [], accuracy: { percentage: 0, reasoning: "Failed to generate results." } };
+    throw err;
   }
 };
 
 export const searchSpecificGame = async (query: string): Promise<GameRecommendation> => {
-  if (!API_KEY) throw new Error("API_KEY missing.");
+  const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : '';
+  if (!apiKey) throw new Error("API_KEY missing.");
 
-  const prompt = `Search for "${query}". Provide its numeric steamAppId and full metadata.`;
+  const ai = new GoogleGenAI({ apiKey });
+
+  const prompt = `Search for the video game "${query}". Provide its numeric steamAppId and full metadata including playtimes and description.`;
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: prompt,
