@@ -40,8 +40,12 @@ const HexagonGrid: React.FC<HexagonGridProps> = ({ games, onGameClick, prefetchC
         try {
           const cachedResponse = await cache.match(imageUrl);
           if (!cachedResponse) {
+            // Note: Using no-cors mode creates opaque responses that can be cached but not read
+            // This is acceptable for image prefetching where we only need the browser cache
             const response = await fetch(imageUrl, { mode: 'no-cors' });
-            await cache.put(imageUrl, response);
+            if (response.type === 'opaque') {
+              await cache.put(imageUrl, response);
+            }
           }
         } catch (error) {
           console.warn(`Failed to prefetch ${game.title}:`, error);
@@ -109,12 +113,18 @@ const HexagonGrid: React.FC<HexagonGridProps> = ({ games, onGameClick, prefetchC
         try {
           const cachedResponse = await cache.match(imageUrl);
           if (!cachedResponse) {
-            fetch(imageUrl, { mode: 'no-cors' }).then(response => {
-              cache.put(imageUrl, response);
-            });
+            fetch(imageUrl, { mode: 'no-cors' })
+              .then(response => {
+                if (response.type === 'opaque') {
+                  return cache.put(imageUrl, response);
+                }
+              })
+              .catch(err => {
+                console.debug(`Hover prefetch failed for ${game.title}:`, err);
+              });
           }
         } catch (error) {
-          // Silently fail on prefetch errors
+          console.debug(`Failed to setup hover prefetch for ${game.title}:`, error);
         }
       }
     }

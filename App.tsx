@@ -11,7 +11,7 @@ const HexagonGrid = lazy(() => import('./components/HexagonGrid.tsx'));
 // Curated featured games for welcome view
 const FEATURED_GAMES = [
   { id: 'elden-ring', steamAppId: '1245620', title: 'Elden Ring' },
-  { id: 'baldurs-gate-3', steamAppId: '1086940', title: 'Baldur\'s Gate 3' },
+  { id: 'baldurs-gate-3', steamAppId: '1086940', title: "Baldur's Gate 3" },
   { id: 'cyberpunk-2077', steamAppId: '1091500', title: 'Cyberpunk 2077' },
   { id: 'hollow-knight', steamAppId: '367520', title: 'Hollow Knight' },
   { id: 'stardew-valley', steamAppId: '413150', title: 'Stardew Valley' },
