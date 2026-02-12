@@ -64,7 +64,7 @@ const FEATURED_GAMES: GameRecommendation[] = [
   {
     id: '5',
     steamAppId: '1817070',
-    title: 'Marvels Spider-Man Remastered',
+    title: 'Marvel\'s Spider-Man Remastered',
     description: 'Experience the critically acclaimed hit in this complete edition with the base game and all DLC.',
     genres: ['Action', 'Adventure'],
     tags: ['Superhero', 'Open World', 'Action'],
