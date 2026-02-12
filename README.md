@@ -21,7 +21,7 @@ SteamQuest is a sophisticated Steam game recommendation engine that helps you di
 2. Set up your environment:
    - Create a `.env.local` file in the root directory
    - Add your Gemini API key: `GEMINI_API_KEY=your_api_key_here`
-   - Get your API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
+   - Get your API key from the [Google AI Developer Console](https://aistudio.google.com/app/apikey)
 
 3. Run the development server:
    ```bash
