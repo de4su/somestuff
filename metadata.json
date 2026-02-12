@@ -1,5 +1,5 @@
 {
-  "name": "Copy of SteamQuest: Game Discovery",
-  "description": "A sophisticated Steam game recommendation engine that determines playtimes, suitability scores, and visual previews using advanced AI.",
+  "name": "SteamQuest: Game Discovery",
+  "description": "A sophisticated Steam game recommendation engine that determines playtimes, suitability scores, and visual previews using intelligent analysis.",
   "requestFramePermissions": []
 }
