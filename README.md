@@ -1,20 +1,38 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# SteamQuest: Game Discovery
 
-# Run and deploy your AI Studio app
+SteamQuest is a sophisticated Steam game recommendation engine that helps you discover your next favorite game. Using intelligent analysis powered by the Gemini API, it determines playtimes, suitability scores, and provides visual previews based on your preferences.
 
-This contains everything you need to run your app locally.
+## Features
 
-View your app in AI Studio: https://ai.studio/apps/drive/1_mySt20v9DOdfiCFA7PcON5Iu4u6w18V
+- **Personalized Recommendations**: Get game suggestions based on your playstyle, preferred genres, and time availability
+- **Detailed Game Information**: View playtimes, genres, tags, and Steam integration
+- **Smart Search**: Search for specific games with instant AI-powered results
+- **Visual Previews**: See game screenshots and descriptions before you commit
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
-
+**Prerequisites:** Node.js
 
 1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+   ```bash
+   npm install
+   ```
+
+2. Set up your environment:
+   - Create a `.env.local` file in the root directory
+   - Add your Gemini API key: `GEMINI_API_KEY=your_api_key_here`
+   - Get your API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
+
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
+
+4. Open your browser and navigate to `http://localhost:3000`
+
+## Tech Stack
+
+- React 19 with TypeScript
+- Vite for fast development and building
+- Gemini API for AI-powered recommendations
+- Tailwind CSS for styling
