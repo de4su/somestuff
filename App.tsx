@@ -1,9 +1,22 @@
 
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { QuizAnswers, RecommendationResponse } from './types.ts';
 import { getGameRecommendations, searchSpecificGame } from './services/geminiService.ts';
 import Quiz from './components/Quiz.tsx';
 import GameCard from './components/GameCard.tsx';
+
+// Lazy load HexagonGrid for better performance
+const HexagonGrid = lazy(() => import('./components/HexagonGrid.tsx'));
+
+// Curated featured games for welcome view
+const FEATURED_GAMES = [
+  { id: 'elden-ring', steamAppId: '1245620', title: 'Elden Ring' },
+  { id: 'baldurs-gate-3', steamAppId: '1086940', title: 'Baldur\'s Gate 3' },
+  { id: 'cyberpunk-2077', steamAppId: '1091500', title: 'Cyberpunk 2077' },
+  { id: 'hollow-knight', steamAppId: '367520', title: 'Hollow Knight' },
+  { id: 'stardew-valley', steamAppId: '413150', title: 'Stardew Valley' },
+  { id: 'red-dead-2', steamAppId: '1174180', title: 'Red Dead Redemption 2' }
+];
 
 const App: React.FC = () => {
   const [view, setView] = useState<'welcome' | 'quiz' | 'loading' | 'results'>('welcome');
@@ -71,20 +84,43 @@ const App: React.FC = () => {
 
       <main className="max-w-7xl mx-auto px-6">
         {view === 'welcome' && (
-          <div className="text-center py-32 animate-in fade-in slide-in-from-bottom-8">
-            <h1 className="text-6xl md:text-8xl font-black text-white mb-8 tracking-tighter">
-              FIND YOUR NEXT<br/><span className="text-blue-400">STEAM ADVENTURE</span>
-            </h1>
-            <p className="text-gray-400 mb-12 max-w-xl mx-auto">
-              Answer a few questions about your playstyle and availability to discover hand-picked Steam games with estimated playtimes and trailers.
-            </p>
-            <button 
-              onClick={() => setView('quiz')}
-              className="px-12 py-5 bg-blue-600 hover:bg-blue-500 text-white rounded font-black text-xl shadow-xl transition-all active:scale-95"
-            >
-              START THE QUIZ
-            </button>
-            {error && <div className="mt-8 p-4 bg-red-900/20 border border-red-500/30 text-red-400 font-mono text-sm rounded max-w-md mx-auto">{error}</div>}
+          <div className="text-center animate-in fade-in slide-in-from-bottom-8">
+            <div className="py-20">
+              <h1 className="text-6xl md:text-8xl font-black text-white mb-8 tracking-tighter">
+                FIND YOUR NEXT<br/><span className="text-blue-400">STEAM ADVENTURE</span>
+              </h1>
+              <p className="text-gray-400 mb-12 max-w-xl mx-auto">
+                Answer a few questions about your playstyle and availability to discover hand-picked Steam games with estimated playtimes and trailers.
+              </p>
+              <button 
+                onClick={() => setView('quiz')}
+                className="px-12 py-5 bg-blue-600 hover:bg-blue-500 text-white rounded font-black text-xl shadow-xl transition-all active:scale-95"
+              >
+                START THE QUIZ
+              </button>
+              {error && <div className="mt-8 p-4 bg-red-900/20 border border-red-500/30 text-red-400 font-mono text-sm rounded max-w-md mx-auto">{error}</div>}
+            </div>
+            
+            {/* Featured Games Grid */}
+            <div className="py-12">
+              <h2 className="text-3xl font-black text-white mb-4 tracking-tighter uppercase">
+                <span className="text-blue-400">Featured</span> Games
+              </h2>
+              <p className="text-gray-400 mb-8 max-w-2xl mx-auto">
+                Explore some of the most acclaimed games available on Steam
+              </p>
+              <Suspense fallback={
+                <div className="py-20 text-center">
+                  <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                </div>
+              }>
+                <HexagonGrid 
+                  games={FEATURED_GAMES} 
+                  onGameClick={(game) => window.open(`https://store.steampowered.com/app/${game.steamAppId}`, '_blank')}
+                  prefetchCount={100}
+                />
+              </Suspense>
+            </div>
           </div>
         )}
 
