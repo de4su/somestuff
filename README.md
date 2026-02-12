@@ -1,13 +1,13 @@
 # SteamQuest: Game Discovery
 
-SteamQuest is a sophisticated Steam game recommendation engine that helps you discover your next favorite game. Using intelligent analysis powered by the Gemini API, it determines playtimes, suitability scores, and provides visual previews based on your preferences.
+SteamQuest is a Steam game discovery showcase that helps you explore curated games with detailed information including playtimes, suitability scores, and visual previews.
 
 ## Features
 
-- **Personalized Recommendations**: Get game suggestions based on your playstyle, preferred genres, and time availability
-- **Detailed Game Information**: View playtimes, genres, tags, and Steam integration
-- **Smart Search**: Search for specific games with instant AI-powered results
-- **Visual Previews**: See game screenshots and descriptions before you commit
+- **Curated Featured Games**: Browse a selection of popular and acclaimed Steam games
+- **Detailed Game Information**: View playtimes (main story and completionist), genres, tags, and Steam integration
+- **Visual Previews**: See game screenshots and descriptions at a glance
+- **Direct Steam Links**: Click any game card to visit its Steam store page
 
 ## Run Locally
 
@@ -18,21 +18,15 @@ SteamQuest is a sophisticated Steam game recommendation engine that helps you di
    npm install
    ```
 
-2. Set up your environment:
-   - Create a `.env.local` file in the root directory
-   - Add your Gemini API key: `GEMINI_API_KEY=your_api_key_here`
-   - Get your API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
-
-3. Run the development server:
+2. Run the development server:
    ```bash
    npm run dev
    ```
 
-4. Open your browser and navigate to `http://localhost:3000`
+3. Open your browser and navigate to `http://localhost:3000`
 
 ## Tech Stack
 
 - React 19 with TypeScript
 - Vite for fast development and building
-- Gemini API for AI-powered recommendations
 - Tailwind CSS for styling

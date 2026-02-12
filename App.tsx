@@ -1,126 +1,123 @@
 
-import React, { useState } from 'react';
-import { QuizAnswers, RecommendationResponse } from './types.ts';
-import { getGameRecommendations, searchSpecificGame } from './services/geminiService.ts';
-import Quiz from './components/Quiz.tsx';
+import React from 'react';
+import { GameRecommendation } from './types.ts';
 import GameCard from './components/GameCard.tsx';
 
+// Static featured games list
+const FEATURED_GAMES: GameRecommendation[] = [
+  {
+    id: '1',
+    steamAppId: '1091500',
+    title: 'Cyberpunk 2077',
+    description: 'An open-world, action-adventure RPG set in the dark future of Night City.',
+    genres: ['RPG', 'Action'],
+    tags: ['Open World', 'Cyberpunk', 'RPG'],
+    mainStoryTime: 25,
+    completionistTime: 103,
+    suitabilityScore: 92,
+    imageUrl: '',
+    developer: 'CD PROJEKT RED',
+    reasonForPick: 'A stunning open-world RPG with deep customization and an engaging story.'
+  },
+  {
+    id: '2',
+    steamAppId: '1174180',
+    title: 'Red Dead Redemption 2',
+    description: 'An epic tale of life in America\'s unforgiving heartland.',
+    genres: ['Action', 'Adventure'],
+    tags: ['Open World', 'Western', 'Story Rich'],
+    mainStoryTime: 50,
+    completionistTime: 173,
+    suitabilityScore: 96,
+    imageUrl: '',
+    developer: 'Rockstar Games',
+    reasonForPick: 'One of the most immersive open-world experiences ever created.'
+  },
+  {
+    id: '3',
+    steamAppId: '1245620',
+    title: 'Elden Ring',
+    description: 'A massive fantasy action RPG adventure set in a world created by Hidetaka Miyazaki and George R.R. Martin.',
+    genres: ['RPG', 'Action'],
+    tags: ['Souls-like', 'Dark Fantasy', 'Open World'],
+    mainStoryTime: 53,
+    completionistTime: 132,
+    suitabilityScore: 94,
+    imageUrl: '',
+    developer: 'FromSoftware',
+    reasonForPick: 'A masterful blend of challenging combat and exploration in a breathtaking world.'
+  },
+  {
+    id: '4',
+    steamAppId: '1203220',
+    title: 'Naraka: Bladepoint',
+    description: 'A 60-player PVP action battle royale with melee combat.',
+    genres: ['Action', 'Battle Royale'],
+    tags: ['Multiplayer', 'Action', 'PvP'],
+    mainStoryTime: 15,
+    completionistTime: 45,
+    suitabilityScore: 85,
+    imageUrl: '',
+    developer: '24 Entertainment',
+    reasonForPick: 'Unique melee-focused battle royale with stunning martial arts combat.'
+  },
+  {
+    id: '5',
+    steamAppId: '1817070',
+    title: 'Marvels Spider-Man Remastered',
+    description: 'Experience the critically acclaimed hit in this complete edition with the base game and all DLC.',
+    genres: ['Action', 'Adventure'],
+    tags: ['Superhero', 'Open World', 'Action'],
+    mainStoryTime: 17,
+    completionistTime: 34,
+    suitabilityScore: 93,
+    imageUrl: '',
+    developer: 'Insomniac Games',
+    reasonForPick: 'The definitive Spider-Man experience with fluid web-slinging and engaging combat.'
+  },
+  {
+    id: '6',
+    steamAppId: '1172470',
+    title: 'Apex Legends',
+    description: 'A free-to-play hero shooter where legendary characters battle for glory.',
+    genres: ['Action', 'Battle Royale'],
+    tags: ['Free to Play', 'FPS', 'Multiplayer'],
+    mainStoryTime: 12,
+    completionistTime: 50,
+    suitabilityScore: 88,
+    imageUrl: '',
+    developer: 'Respawn Entertainment',
+    reasonForPick: 'Fast-paced hero shooter with excellent movement mechanics and team play.'
+  }
+];
+
 const App: React.FC = () => {
-  const [view, setView] = useState<'welcome' | 'quiz' | 'loading' | 'results'>('welcome');
-  const [results, setResults] = useState<RecommendationResponse | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleQuizComplete = async (answers: QuizAnswers) => {
-    setView('loading');
-    setError(null);
-    try {
-      const data = await getGameRecommendations(answers);
-      setResults(data);
-      setView('results');
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Error loading recommendations. Please ensure your API key is set in Vercel.');
-      setView('welcome');
-    }
-  };
-
-  const handleManualSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-    setIsSearching(true);
-    setView('loading');
-    setError(null);
-    try {
-      const game = await searchSpecificGame(searchQuery);
-      setResults({
-        recommendations: [game],
-        accuracy: { percentage: 100, reasoning: 'Direct search match.' }
-      });
-      setView('results');
-    } catch (err) {
-      console.error(err);
-      setError('Game not found or API error.');
-      setView('welcome');
-    } finally {
-      setIsSearching(false);
-      setSearchQuery('');
-    }
-  };
-
   return (
     <div className="min-h-screen steam-gradient pb-20">
       <nav className="p-6 border-b border-white/5 mb-8 sticky top-0 bg-[#171a21]/95 backdrop-blur-xl z-50">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-          <div onClick={() => setView('welcome')} className="text-2xl font-black text-white cursor-pointer tracking-tighter flex items-center gap-2">
+        <div className="max-w-7xl mx-auto flex justify-center items-center">
+          <div className="text-2xl font-black text-white cursor-pointer tracking-tighter flex items-center gap-2">
             <span className="bg-blue-600 px-2 py-0.5 rounded-sm">STEAM</span>
             <span className="text-blue-400">QUEST</span>
           </div>
-          <form onSubmit={handleManualSearch} className="relative w-full md:w-96">
-            <input 
-              type="text"
-              placeholder="Search specific game..."
-              className="w-full bg-black/50 border border-white/10 rounded px-5 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </form>
         </div>
       </nav>
 
       <main className="max-w-7xl mx-auto px-6">
-        {view === 'welcome' && (
-          <div className="text-center py-32 animate-in fade-in slide-in-from-bottom-8">
-            <h1 className="text-6xl md:text-8xl font-black text-white mb-8 tracking-tighter">
-              FIND YOUR NEXT<br/><span className="text-blue-400">STEAM ADVENTURE</span>
-            </h1>
-            <p className="text-gray-400 mb-12 max-w-xl mx-auto">
-              Answer a few questions about your playstyle and availability to discover hand-picked Steam games with estimated playtimes and trailers.
-            </p>
-            <button 
-              onClick={() => setView('quiz')}
-              className="px-12 py-5 bg-blue-600 hover:bg-blue-500 text-white rounded font-black text-xl shadow-xl transition-all active:scale-95"
-            >
-              START THE QUIZ
-            </button>
-            {error && <div className="mt-8 p-4 bg-red-900/20 border border-red-500/30 text-red-400 font-mono text-sm rounded max-w-md mx-auto">{error}</div>}
-          </div>
-        )}
+        <div className="text-center py-16 animate-in fade-in slide-in-from-bottom-8">
+          <h1 className="text-6xl md:text-8xl font-black text-white mb-8 tracking-tighter">
+            DISCOVER AMAZING<br/><span className="text-blue-400">STEAM GAMES</span>
+          </h1>
+          <p className="text-gray-400 mb-12 max-w-xl mx-auto">
+            Explore our curated collection of featured Steam games with detailed playtimes, suitability scores, and previews.
+          </p>
+        </div>
 
-        {view === 'loading' && (
-          <div className="py-40 text-center flex flex-col items-center">
-            <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-6"></div>
-            <h3 className="text-2xl font-black text-white tracking-widest uppercase">Consulting the Archives...</h3>
-          </div>
-        )}
-
-        {view === 'results' && results && (
-          <div className="animate-results">
-            <div className="mb-12 p-8 steam-card border-l-4 border-l-blue-500 flex flex-col md:flex-row justify-between items-center gap-6 rounded-r-lg">
-              <div>
-                <h2 className="text-2xl font-black text-white uppercase tracking-tight">Quiz Match Accuracy</h2>
-                <p className="text-gray-400 max-w-xl">{results.accuracy?.reasoning}</p>
-              </div>
-              <div className="text-5xl font-stats text-blue-400">{results.accuracy?.percentage || 0}%</div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-              {(results.recommendations || []).map((game, idx) => (
-                <GameCard key={game.id || idx} game={game} />
-              ))}
-            </div>
-            <div className="mt-16 text-center">
-              <button 
-                onClick={() => setView('quiz')}
-                className="text-blue-400 hover:text-white transition-colors uppercase font-black tracking-widest text-sm"
-              >
-                &larr; Take the quiz again
-              </button>
-            </div>
-          </div>
-        )}
-
-        {view === 'quiz' && <Quiz onComplete={handleQuizComplete} />}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+          {FEATURED_GAMES.map((game) => (
+            <GameCard key={game.id} game={game} />
+          ))}
+        </div>
       </main>
     </div>
   );
