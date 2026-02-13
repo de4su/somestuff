@@ -11,17 +11,14 @@ const GAME_SCHEMA = {
         properties: {
           id: { type: Type.STRING },
           steamAppId: { type: Type.STRING, description: "The numeric Steam App ID." },
-          title: { type: Type.STRING },
-          description: { type: Type.STRING },
           genres: { type: Type.ARRAY, items: { type: Type.STRING } },
           tags: { type: Type.ARRAY, items: { type: Type.STRING } },
           mainStoryTime: { type: Type.NUMBER },
           completionistTime: { type: Type.NUMBER },
           suitabilityScore: { type: Type.NUMBER },
-          developer: { type: Type.STRING },
           reasonForPick: { type: Type.STRING }
         },
-        required: ["id", "steamAppId", "title", "description", "mainStoryTime", "completionistTime", "suitabilityScore", "reasonForPick"]
+        required: ["id", "steamAppId", "mainStoryTime", "completionistTime", "suitabilityScore", "reasonForPick"]
       }
     },
     accuracy: {
@@ -41,39 +38,63 @@ const getSteamImageUrl = (steamAppId: string): string => {
   return `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${steamAppId}/header.jpg`;
 };
 
-// Helper: Fetch real prices from Steam and gg.deals
-const fetchRealPrices = async (steamAppId: string, title: string) => {
+// Helper: Fetch REAL game details from Steam API
+const fetchSteamGameDetails = async (steamAppId: string) => {
   try {
-    // Get Steam price
-    const steamResponse = await fetch(`https://store.steampowered.com/api/appdetails?appids=${steamAppId}&cc=us`);
-    const steamData = await steamResponse.json();
-    const priceData = steamData[steamAppId]?.data?.price_overview;
-    const steamPrice = priceData ? `$${(priceData.final / 100).toFixed(2)}` : "Free";
-
-    // Get gg.deals info
-    const ggDealsApiKey = import.meta.env.VITE_GGDEALS_API_KEY || '';
-    let cheapestPrice = "Check gg.deals";
-    let dealUrl = `https://gg.deals/game/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}/`;
-
-    if (ggDealsApiKey) {
-      try {
-        const ggResponse = await fetch(`https://api.gg.deals/v1/games?key=${ggDealsApiKey}&title=${encodeURIComponent(title)}`);
-        const ggData = await ggResponse.json();
-        if (ggData.data && ggData.data.length > 0) {
-          const gameData = ggData.data[0];
-          cheapestPrice = gameData.price?.amount ? `$${gameData.price.amount}` : cheapestPrice;
-          dealUrl = `https://gg.deals${gameData.url}`;
-        }
-      } catch (ggError) {
-        console.warn("gg.deals API error:", ggError);
-      }
+    const response = await fetch(`https://store.steampowered.com/api/appdetails?appids=${steamAppId}&cc=us`);
+    const data = await response.json();
+    const gameData = data[steamAppId]?.data;
+    
+    if (!gameData) {
+      return {
+        title: "Unknown Game",
+        description: "Game details not available",
+        developer: "Unknown",
+        steamPrice: "N/A"
+      };
     }
 
-    return { steamPrice, cheapestPrice, dealUrl };
+    const priceData = gameData.price_overview;
+    const steamPrice = priceData ? `$${(priceData.final / 100).toFixed(2)}` : "Free";
+    
+    return {
+      title: gameData.name || "Unknown Game",
+      description: gameData.short_description || gameData.detailed_description || "No description available",
+      developer: gameData.developers?.[0] || "Unknown",
+      steamPrice
+    };
   } catch (error) {
-    console.error("Price fetch error:", error);
-    return { steamPrice: "N/A", cheapestPrice: "N/A", dealUrl: "" };
+    console.error("Steam API error for", steamAppId, error);
+    return {
+      title: "Unknown Game",
+      description: "Error fetching game details",
+      developer: "Unknown",
+      steamPrice: "N/A"
+    };
   }
+};
+
+// Helper: Fetch gg.deals price and URL
+const fetchGGDealsInfo = async (title: string) => {
+  const ggDealsApiKey = import.meta.env.VITE_GGDEALS_API_KEY || '';
+  let cheapestPrice = "Check gg.deals";
+  let dealUrl = `https://gg.deals/game/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}/`;
+
+  if (ggDealsApiKey) {
+    try {
+      const ggResponse = await fetch(`https://api.gg.deals/v1/games?key=${ggDealsApiKey}&title=${encodeURIComponent(title)}`);
+      const ggData = await ggResponse.json();
+      if (ggData.data && ggData.data.length > 0) {
+        const gameData = ggData.data[0];
+        cheapestPrice = gameData.price?.amount ? `$${gameData.price.amount}` : cheapestPrice;
+        dealUrl = `https://gg.deals${gameData.url}`;
+      }
+    } catch (ggError) {
+      console.warn("gg.deals API error:", ggError);
+    }
+  }
+
+  return { cheapestPrice, dealUrl };
 };
 
 export const getGameRecommendations = async (answers: QuizAnswers): Promise<RecommendationResponse> => {
@@ -92,10 +113,10 @@ export const getGameRecommendations = async (answers: QuizAnswers): Promise<Reco
     - Keywords: ${answers.specificKeywords}
     
     CRITICAL INSTRUCTIONS:
-    1. Identify exact Steam App IDs.
+    1. Identify exact Steam App IDs only.
     2. Use HowLongToBeat values for Main Story and Completionist times.
     3. SUITABILITY: Score 0-100 based on how well the game matches user preferences.
-    4. Provide accurate game descriptions and genres.`;
+    4. Explain why you picked each game in reasonForPick.`;
 
   try {
     const response = await ai.models.generateContent({
@@ -110,13 +131,18 @@ export const getGameRecommendations = async (answers: QuizAnswers): Promise<Reco
     const parsed = JSON.parse(response.text || '{}');
     const recommendations = parsed.recommendations || [];
 
-    // Enrich each game with real data
+    // Enrich each game with REAL data from Steam
     for (let game of recommendations) {
+      const steamDetails = await fetchSteamGameDetails(game.steamAppId);
+      const ggDealsInfo = await fetchGGDealsInfo(steamDetails.title);
+      
+      game.title = steamDetails.title;
+      game.description = steamDetails.description;
+      game.developer = steamDetails.developer;
       game.imageUrl = getSteamImageUrl(game.steamAppId);
-      const prices = await fetchRealPrices(game.steamAppId, game.title);
-      game.steamPrice = prices.steamPrice;
-      game.cheapestPrice = prices.cheapestPrice;
-      game.dealUrl = prices.dealUrl;
+      game.steamPrice = steamDetails.steamPrice;
+      game.cheapestPrice = ggDealsInfo.cheapestPrice;
+      game.dealUrl = ggDealsInfo.dealUrl;
     }
 
     return {
@@ -135,7 +161,7 @@ export const searchSpecificGame = async (query: string): Promise<GameRecommendat
 
   const ai = new GoogleGenAI({ apiKey });
 
-  const prompt = `Search for the specific video game "${query}". Retrieve its numeric steamAppId, official developer, and playtimes (main story/completionist). Provide accurate game description.`;
+  const prompt = `Search for the specific video game "${query}". Retrieve ONLY its numeric Steam App ID and playtimes (main story/completionist).`;
   
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-lite",
@@ -147,27 +173,29 @@ export const searchSpecificGame = async (query: string): Promise<GameRecommendat
         properties: {
           id: { type: Type.STRING },
           steamAppId: { type: Type.STRING },
-          title: { type: Type.STRING },
-          description: { type: Type.STRING },
           mainStoryTime: { type: Type.NUMBER },
           completionistTime: { type: Type.NUMBER },
           suitabilityScore: { type: Type.NUMBER },
-          developer: { type: Type.STRING },
           reasonForPick: { type: Type.STRING }
         },
-        required: ["id", "steamAppId", "title", "description", "mainStoryTime", "completionistTime", "reasonForPick"]
+        required: ["id", "steamAppId", "mainStoryTime", "completionistTime", "reasonForPick"]
       },
     },
   });
   
   const game = JSON.parse(response.text || '{}');
   
-  // Enrich with real data
+  // Fetch REAL game details from Steam
+  const steamDetails = await fetchSteamGameDetails(game.steamAppId);
+  const ggDealsInfo = await fetchGGDealsInfo(steamDetails.title);
+  
+  game.title = steamDetails.title;
+  game.description = steamDetails.description;
+  game.developer = steamDetails.developer;
   game.imageUrl = getSteamImageUrl(game.steamAppId);
-  const prices = await fetchRealPrices(game.steamAppId, game.title);
-  game.steamPrice = prices.steamPrice;
-  game.cheapestPrice = prices.cheapestPrice;
-  game.dealUrl = prices.dealUrl;
+  game.steamPrice = steamDetails.steamPrice;
+  game.cheapestPrice = ggDealsInfo.cheapestPrice;
+  game.dealUrl = ggDealsInfo.dealUrl;
   
   return game;
 };
