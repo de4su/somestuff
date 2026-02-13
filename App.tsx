@@ -50,9 +50,11 @@ const App: React.FC = () => {
     <div className="min-h-screen relative overflow-x-hidden">
       <HexBackground />
 
-      <div className="relative z-10 min-h-screen flex flex-col">
+      {/* CRITICAL FIX: Add pointer-events-none here */}
+      <div className="relative z-10 min-h-screen flex flex-col pointer-events-none">
         
-        <nav className="p-6 border-b border-white/5 sticky top-0 bg-[#171a21]/70 backdrop-blur-2xl z-50">
+        {/* Nav needs pointer-events-auto */}
+        <nav className="p-6 border-b border-white/5 sticky top-0 bg-[#171a21]/70 backdrop-blur-2xl z-50 pointer-events-auto">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
             <div 
               onClick={() => setView('welcome')} 
@@ -75,12 +77,12 @@ const App: React.FC = () => {
 
         <main className="flex-grow max-w-7xl mx-auto px-6 py-12 w-full flex flex-col items-center justify-center">
           {view === 'welcome' && (
-            <div className="text-center py-20 welcome-container">
-              <h1 className="text-6xl md:text-8xl font-black text-white mb-6 tracking-tighter leading-none drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] welcome-title">
+            <div className="text-center py-20 welcome-container pointer-events-auto">
+              <h1 className="text-6xl md:text-8xl font-black text-white mb-6 tracking-tighter leading-none drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] select-none pointer-events-none">
                 DISCOVER YOUR<br/>
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">NEXT OBSESSION</span>
               </h1>
-              <p className="text-gray-300 mb-12 max-w-xl mx-auto text-lg font-medium bg-black/40 backdrop-blur-sm p-4 rounded-2xl border border-white/5 welcome-subtitle">
+              <p className="text-gray-300 mb-12 max-w-xl mx-auto text-lg font-medium bg-black/40 backdrop-blur-sm p-4 rounded-2xl border border-white/5 select-none pointer-events-none">
                 Our AI analyzes thousands of Steam titles to find games that match your specific playstyle and time constraints.
               </p>
               <button 
@@ -98,7 +100,7 @@ const App: React.FC = () => {
           )}
 
           {view === 'loading' && (
-            <div className="py-40 text-center flex flex-col items-center animate-pulse">
+            <div className="py-40 text-center flex flex-col items-center animate-pulse pointer-events-none">
               <div className="w-20 h-20 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-8 shadow-[0_0_30px_rgba(37,99,235,0.3)]"></div>
               <h3 className="text-2xl font-black text-white tracking-widest uppercase">Querying Steam Database...</h3>
               <p className="text-gray-500 mt-2">Determining playtimes and compatibility scores</p>
@@ -106,7 +108,7 @@ const App: React.FC = () => {
           )}
 
           {view === 'results' && results && (
-            <div className="animate-results w-full">
+            <div className="animate-results w-full pointer-events-auto">
               <div className="mb-10 p-10 steam-card border-l-8 border-l-blue-600 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-8 shadow-2xl">
                 <div className="text-center md:text-left">
                   <h2 className="text-3xl font-black text-white mb-2 uppercase tracking-tight">Curation Complete</h2>
@@ -138,7 +140,7 @@ const App: React.FC = () => {
           )}
 
           {view === 'quiz' && (
-            <div className="w-full quiz-wrapper">
+            <div className="w-full pointer-events-auto">
               <Quiz onComplete={handleQuizComplete} />
             </div>
           )}
