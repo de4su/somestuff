@@ -57,13 +57,15 @@
             z-index: 0;
             overflow: hidden;
             background: radial-gradient(circle at center, var(--steam-navy) 0%, var(--steam-dark) 100%);
-            pointer-events: none;
+            pointer-events: none; /* Wrapper doesn't block clicks */
         }
         
         @keyframes scrollBackgroundRoaming {
-            0% { transform: translate(0, 0) scale(1.1) translateZ(0); }
-            50% { transform: translate(50px, -30px) scale(1.12) translateZ(0); }
-            100% { transform: translate(0, 0) scale(1.1) translateZ(0); }
+            0% { transform: translate(0, 0) scale(1.15) translateZ(0); }
+            25% { transform: translate(var(--mv-x1), var(--mv-y1)) scale(1.18) translateZ(0); }
+            50% { transform: translate(var(--mv-x2), var(--mv-y2)) scale(1.15) translateZ(0); }
+            75% { transform: translate(var(--mv-x3), var(--mv-y3)) scale(1.18) translateZ(0); }
+            100% { transform: translate(0, 0) scale(1.15) translateZ(0); }
         }
 
         @keyframes neonPulse {
@@ -76,7 +78,7 @@
             flex-direction: column;
             gap: var(--hex-gap);
             padding: 100px;
-            animation: scrollBackgroundRoaming 60s ease-in-out infinite;
+            animation: scrollBackgroundRoaming 45s ease-in-out infinite; /* Back to 45s */
             position: absolute;
             top: -300px;
             left: -300px;
@@ -101,14 +103,14 @@
             transition: transform 0.4s ease, opacity 0.4s ease;
             position: relative;
             flex-shrink: 0;
-            pointer-events: auto;
+            pointer-events: auto; /* Hexes can be hovered throughout the app */
             will-change: transform, opacity;
             animation: neonPulse 4s infinite ease-in-out;
             animation-delay: calc(var(--delay, 0) * 1s);
             contain: layout style paint;
         }
 
-        .hex:hover, .hex.active {
+        .hex:hover {
             background: #fff; 
             transform: scale(1.25) rotate(2deg) translateZ(0);
             z-index: 50;
@@ -138,7 +140,7 @@
             will-change: transform, opacity;
         }
 
-        .hex:hover .hex-image, .hex.active .hex-image {
+        .hex:hover .hex-image {
             opacity: 1;
             transform: scale(1) translateZ(0);
         }
@@ -161,6 +163,18 @@
         
         .ghost-text {
             pointer-events: none;
+        }
+
+        /* Fix for main content to stay above hex grid */
+        #root {
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Ensure buttons and interactive elements work */
+        button, a, input, select, textarea {
+            position: relative;
+            z-index: 15;
         }
     </style>
 <script type="importmap">
