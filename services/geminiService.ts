@@ -116,7 +116,6 @@ export const searchSpecificGame = async (query: string): Promise<GameRecommendat
         },
         required: ["id", "steamAppId", "title", "description", "mainStoryTime", "completionistTime", "imageUrl", "reasonForPick", "steamPrice", "cheapestPrice", "dealUrl"]
       },
-      tools: [{ googleSearch: {} }]
     },
   });
   return JSON.parse(response.text || '{}');
