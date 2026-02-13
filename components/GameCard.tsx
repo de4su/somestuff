@@ -1,5 +1,6 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { GameRecommendation } from '../types.ts';
+import { GameRecommendation } from '../types';
 
 interface GameCardProps {
   game: GameRecommendation;
@@ -7,13 +8,12 @@ interface GameCardProps {
 
 const GameCard: React.FC<GameCardProps> = ({ game }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const [videoLoading, setVideoLoading] = useState(false);
-  const [videoPlaying, setVideoPlaying] = useState(false);
-  const [videoError, setVideoError] = useState(false);
+  const [videoLoaded, setVideoLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const staticImage = `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/header.jpg`;
-  const microtrailerUrl = `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/microtrailer.mp4`;
+  // Using the high-quality microtrailer for that smooth "glance" discovery
+  const videoTrailer = `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/microtrailer.mp4`;
   const storeUrl = `https://store.steampowered.com/app/${game.steamAppId}`;
 
   const getScoreColor = (score: number) => {
@@ -22,147 +22,104 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
     return 'text-yellow-400 border-yellow-500 bg-yellow-500/20';
   };
 
-  const handleCardClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    window.open(storeUrl, '_blank');
-  };
-
-  // Handle video loading and playing on hover
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (isHovered && !videoError) {
-      setVideoLoading(true);
-      
-      // Attempt to load and play video
-      const playPromise = video.play();
-      
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            setVideoLoading(false);
-            setVideoPlaying(true);
-          })
-          .catch(() => {
-            setVideoLoading(false);
-            setVideoError(true);
-            setVideoPlaying(false);
-          });
-      }
-    } else {
-      video.pause();
-      video.currentTime = 0;
-      setVideoPlaying(false);
-      setVideoLoading(false);
+    if (isHovered && videoRef.current) {
+      videoRef.current.play().then(() => setVideoLoaded(true)).catch(() => {});
+    } else if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+      setVideoLoaded(false);
     }
-  }, [isHovered, videoError]);
+  }, [isHovered]);
 
   return (
     <div 
-      className="steam-card rounded-lg overflow-hidden flex flex-col h-full group border border-white/5 hover:border-blue-500/30 cursor-pointer shadow-lg"
+      className="steam-card rounded-2xl overflow-hidden flex flex-col h-full group cursor-pointer shadow-2xl relative"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={handleCardClick}
+      onClick={() => window.open(storeUrl, '_blank')}
     >
-      <div className="relative h-56 w-full overflow-hidden bg-black">
-        {/* Static header image */}
+      {/* Cinematic Header with Microtrailer */}
+      <div className="relative h-56 w-full overflow-hidden bg-black group-hover:shadow-[0_0_30px_rgba(102,192,244,0.3)] transition-all duration-500">
         <img 
           src={staticImage} 
           alt={game.title}
-          className="w-full h-full object-cover"
-          loading="lazy"
+          className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-in-out ${isHovered ? 'scale-110 opacity-40 blur-sm' : 'scale-100 opacity-100 blur-0'}`}
         />
         
-        {/* Video microtrailer overlay */}
-        {!videoError && (
-          <video
-            ref={videoRef}
-            src={microtrailerUrl}
-            className={`absolute top-0 left-0 w-full h-full object-cover transition-opacity duration-300 ${
-              videoPlaying ? 'opacity-100' : 'opacity-0'
-            }`}
-            loop
-            muted
-            playsInline
-            onError={() => setVideoError(true)}
-          />
-        )}
-        
-        {/* Loading spinner */}
-        {videoLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        {/* The Live Video Element */}
+        <video 
+          ref={videoRef}
+          src={videoTrailer}
+          muted
+          loop
+          playsInline
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${isHovered && videoLoaded ? 'opacity-100' : 'opacity-0'}`}
+        />
+
+        {/* Live Indicator - Visible when video plays */}
+        {isHovered && videoLoaded && (
+          <div className="absolute top-4 right-4 flex items-center gap-2 px-2 py-1 bg-black/60 backdrop-blur-md border border-red-500/50 rounded text-[10px] font-black text-white z-20">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse-red"></span>
+            LIVE PREVIEW
           </div>
         )}
-        
-        {/* LIVE PREVIEW badge */}
-        {videoPlaying && (
-          <div className="absolute top-0 right-0 m-4 px-3 py-1.5 rounded bg-red-600 border-2 border-red-400 text-white text-xs font-black uppercase tracking-wider animate-pulse">
-            🔴 LIVE PREVIEW
-          </div>
-        )}
-        
-        <div className={`absolute top-0 left-0 m-4 px-3 py-1.5 rounded border-2 text-base font-black z-10 shadow-2xl backdrop-blur-md ${getScoreColor(game.suitabilityScore)}`}>
-          {game.suitabilityScore}%
+
+        <div className={`absolute top-4 left-4 px-3 py-1 rounded-md border font-black text-xs z-10 backdrop-blur-xl ${getScoreColor(game.suitabilityScore)} shadow-lg`}>
+          {game.suitabilityScore}% MATCH
         </div>
-        
-        <div className="absolute inset-0 bg-gradient-to-t from-[#1b2838] via-transparent to-transparent opacity-40"></div>
+
+        {/* Loading Spinner for video */}
+        {isHovered && !videoLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm z-10">
+            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        )}
       </div>
       
       <div className="p-6 flex flex-col flex-grow">
-        <h3 className="text-2xl font-black text-white group-hover:text-blue-400 transition-colors mb-6 tracking-tight leading-none uppercase">
-          {game.title}
-        </h3>
+        <div className="flex justify-between items-start mb-4">
+          <h3 className="text-xl font-black text-white group-hover:text-blue-400 transition-colors line-clamp-1 uppercase tracking-tight flex-1">
+            {game.title}
+          </h3>
+          <span className="text-[10px] font-mono text-gray-500 ml-2">ID: {game.steamAppId}</span>
+        </div>
 
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-500/10 p-2.5 rounded-lg border border-blue-500/20">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] text-gray-500 uppercase font-black tracking-[0.2em] leading-none mb-1.5">MAIN</span>
-              <span className="text-3xl font-stats text-blue-100 leading-none">{game.mainStoryTime}<span className="text-sm ml-1 text-blue-400/50">h</span></span>
-            </div>
+        {/* Tech Stats Section */}
+        <div className="grid grid-cols-2 gap-px bg-white/5 border border-white/5 rounded-xl overflow-hidden mb-6">
+          <div className="bg-[#1b2838]/80 p-4 flex flex-col items-center">
+            <div className="text-[9px] text-blue-400/70 font-black uppercase tracking-[0.2em] mb-1">Main Quest</div>
+            <div className="text-2xl font-stats text-white leading-none">{game.mainStoryTime}<span className="text-xs text-blue-500 font-normal ml-0.5">hrs</span></div>
           </div>
-
-          <div className="h-12 w-[1px] bg-white/5 mx-2"></div>
-
-          <div className="flex items-center gap-3 text-right">
-            <div className="flex flex-col items-end">
-              <span className="text-[10px] text-gray-500 uppercase font-black tracking-[0.2em] leading-none mb-1.5">COMPLETIONIST</span>
-              <span className="text-3xl font-stats text-purple-300 leading-none">{game.completionistTime}<span className="text-sm ml-1 text-purple-500/50">h</span></span>
-            </div>
-            <div className="bg-purple-500/10 p-2.5 rounded-lg border border-purple-500/20">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-              </svg>
-            </div>
+          <div className="bg-[#1b2838]/80 p-4 flex flex-col items-center">
+            <div className="text-[9px] text-purple-400/70 font-black uppercase tracking-[0.2em] mb-1">Completionist</div>
+            <div className="text-2xl font-stats text-white leading-none">{game.completionistTime}<span className="text-xs text-purple-500 font-normal ml-0.5">hrs</span></div>
           </div>
         </div>
 
-        <p className="text-sm text-gray-400 line-clamp-2 mb-6 font-medium leading-relaxed italic opacity-80">
+        {/* Suitability Heat Bar */}
+        <div className="mb-6">
+           <div className="flex justify-between text-[10px] font-black text-gray-600 mb-1 uppercase">
+             <span>Suitability Index</span>
+             <span>{game.suitabilityScore}/100</span>
+           </div>
+           <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden flex">
+             <div className="bg-gradient-to-r from-blue-600 to-blue-400 h-full transition-all duration-1000 delay-300" style={{ width: isHovered ? `${game.suitabilityScore}%` : '0%' }}></div>
+           </div>
+        </div>
+
+        <p className="text-sm text-gray-400 line-clamp-2 mb-6 font-medium leading-relaxed italic opacity-75 group-hover:opacity-100 transition-opacity">
           "{game.description}"
         </p>
 
-        <div className="mt-auto pt-5 border-t border-white/5">
-          <div className="flex gap-4">
-            <div className="shrink-0 mt-1">
-              <div className="bg-blue-600/20 p-2 rounded-md border border-blue-500/20">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M18 13V5a2 2 0 00-2-2H4a2 2 0 00-2 2v8a2 2 0 002 2h3l3 3 3-3h3a2 2 0 002-2zM5 7a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 3a1 1 0 100 2h3a1 1 0 100-2H6z" clipRule="evenodd" />
-                </svg>
-              </div>
-            </div>
-            <div>
-              <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest block mb-1">CURATOR NOTES</span>
-              <p className="text-[11px] text-blue-200/60 leading-snug font-medium">
-                {game.reasonForPick}
-              </p>
-            </div>
+        {/* Engine Logic Tag */}
+        <div className="mt-auto flex items-start gap-3 p-3 bg-blue-500/5 rounded-lg border border-blue-500/10 group-hover:border-blue-500/30 transition-colors">
+          <div className="bg-blue-600 p-1 rounded">
+             <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M13 10V3L4 14h7v7l9-11h-7z" />
+             </svg>
           </div>
+          <p className="text-[11px] text-blue-300/80 font-semibold leading-tight">{game.reasonForPick}</p>
         </div>
       </div>
     </div>
