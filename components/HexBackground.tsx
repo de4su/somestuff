@@ -18,8 +18,8 @@ const HexBackground: React.FC = () => {
   const lastHoveredHexRef = useRef<HTMLElement | null>(null);
 
   const gridData = useMemo(() => {
-    const rows = 30;
-    const cols = 30;
+    const rows = 15;
+    const cols = 15;
 
     const getShuffledId = (r: number, c: number) => {
       const hash = (r * 127 + c * 13) % HEX_GAMES_POOL.length;
