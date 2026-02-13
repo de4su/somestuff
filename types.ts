@@ -1,7 +1,7 @@
 
 export interface GameRecommendation {
   id: string;
-  steamAppId: string; // The official Steam App ID for constructing asset URLs
+  steamAppId: string;
   title: string;
   description: string;
   genres: string[];
@@ -13,6 +13,9 @@ export interface GameRecommendation {
   gifUrl?: string; 
   developer: string;
   reasonForPick: string;
+  steamPrice?: string; // Official Steam Store price
+  cheapestPrice?: string; // Absolute cheapest price found on gg.deals
+  dealUrl?: string; // Link to gg.deals
 }
 
 export interface QuizAnswers {
