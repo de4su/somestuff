@@ -33,59 +33,102 @@ const GAME_SCHEMA = {
   required: ["recommendations", "accuracy"]
 };
 
+// Multiple CORS proxies as fallbacks
+const CORS_PROXIES = [
+  (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+  (url: string) => url // Try direct fetch as last resort
+];
+
 const getSteamImageUrl = (steamAppId: string): string => {
   return `https://cdn.akamai.steamstatic.com/steam/apps/${steamAppId}/header.jpg`;
 };
 
-const fetchSteamGameDetails = async (steamAppId: string) => {
-  try {
-    // Use CORS proxy
-    const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(`https://store.steampowered.com/api/appdetails?appids=${steamAppId}&cc=us`)}`);
-    const data = await response.json();
-    const gameData = data[steamAppId]?.data;
-    
-    if (!gameData) {
-      return {
-        title: "Unknown Game",
-        description: "Game details not available",
-        developer: "Unknown",
-        steamPrice: "N/A"
-      };
-    }
+const createGGDealsSlug = (title: string): string => {
+  return title.toLowerCase()
+    .replace(/['']/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
 
-    const priceData = gameData.price_overview;
-    const steamPrice = priceData ? `$${(priceData.final / 100).toFixed(2)}` : "Free";
-    
-    return {
-      title: gameData.name || "Unknown Game",
-      description: gameData.short_description || gameData.detailed_description || "No description available",
-      developer: gameData.developers?.[0] || "Unknown",
-      steamPrice
-    };
-  } catch (error) {
-    console.error("Steam API error for", steamAppId, error);
-    return {
-      title: "Unknown Game",
-      description: "Error fetching game details",
-      developer: "Unknown",
-      steamPrice: "N/A"
-    };
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const fetchSteamGameDetails = async (steamAppId: string) => {
+  const steamUrl = `https://store.steampowered.com/api/appdetails?appids=${steamAppId}&cc=us`;
+  
+  // Try each proxy in sequence
+  for (let i = 0; i < CORS_PROXIES.length; i++) {
+    try {
+      const proxyUrl = CORS_PROXIES[i](steamUrl);
+      console.log(`Attempting Steam fetch for ${steamAppId} using proxy ${i + 1}/${CORS_PROXIES.length}`);
+      
+      const response = await fetch(proxyUrl, {
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      });
+      
+      if (!response.ok) {
+        console.warn(`Proxy ${i + 1} failed with status ${response.status}`);
+        continue;
+      }
+      
+      const data = await response.json();
+      const gameData = data[steamAppId]?.data;
+      
+      if (!gameData || data[steamAppId]?.success === false) {
+        console.warn(`No valid data for Steam App ID: ${steamAppId}`);
+        return null;
+      }
+
+      const priceData = gameData.price_overview;
+      const steamPrice = priceData ? `$${(priceData.final / 100).toFixed(2)}` : "Free";
+      
+      console.log(`✅ Successfully fetched ${gameData.name} using proxy ${i + 1}`);
+      
+      return {
+        title: gameData.name || "Unknown Game",
+        description: gameData.short_description || gameData.detailed_description || "No description available",
+        developer: gameData.developers?.[0] || "Unknown",
+        steamPrice
+      };
+      
+    } catch (error) {
+      console.warn(`Proxy ${i + 1} error for ${steamAppId}:`, error.message);
+      
+      // If not the last proxy, continue to next
+      if (i < CORS_PROXIES.length - 1) {
+        await delay(500); // Small delay before trying next proxy
+        continue;
+      }
+    }
   }
+  
+  // All proxies failed
+  console.error(`All proxies failed for Steam App ID: ${steamAppId}`);
+  return null;
 };
 
 const fetchGGDealsInfo = async (title: string) => {
   const ggDealsApiKey = import.meta.env.VITE_GGDEALS_API_KEY || '';
+  
   let cheapestPrice = "View Deals";
-  let dealUrl = `https://gg.deals/game/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}/`;
+  let dealUrl = `https://gg.deals/game/${createGGDealsSlug(title)}/`;
 
   if (ggDealsApiKey) {
     try {
       const ggResponse = await fetch(`https://api.gg.deals/v1/games?key=${ggDealsApiKey}&title=${encodeURIComponent(title)}`);
       const ggData = await ggResponse.json();
+      
       if (ggData.data && ggData.data.length > 0) {
         const gameData = ggData.data[0];
-        cheapestPrice = gameData.price?.amount ? `$${gameData.price.amount}` : cheapestPrice;
-        dealUrl = `https://gg.deals${gameData.url}`;
+        
+        if (gameData.url) {
+          dealUrl = `https://gg.deals${gameData.url}`;
+        }
+        
+        if (gameData.price?.amount) {
+          cheapestPrice = `$${gameData.price.amount}`;
+        }
       }
     } catch (ggError) {
       console.warn("gg.deals API error:", ggError);
@@ -110,7 +153,7 @@ export const getGameRecommendations = async (answers: QuizAnswers): Promise<Reco
     - Availability: ${answers.timeAvailability}
     - Keywords: ${answers.specificKeywords}
     
-    CRITICAL: Provide EXACT Steam App IDs, accurate HowLongToBeat times, and score 0-100 based on preference match.`;
+    CRITICAL: Provide EXACT VALID Steam App IDs that exist on Steam. Use accurate HowLongToBeat times. Score 0-100 based on preference match.`;
 
   try {
     const response = await ai.models.generateContent({
@@ -125,8 +168,19 @@ export const getGameRecommendations = async (answers: QuizAnswers): Promise<Reco
     const parsed = JSON.parse(response.text || '{}');
     const recommendations = parsed.recommendations || [];
 
-    for (let game of recommendations) {
+    const enrichedGames = [];
+    for (let i = 0; i < recommendations.length; i++) {
+      const game = recommendations[i];
+      
+      if (i > 0) await delay(300);
+      
       const steamDetails = await fetchSteamGameDetails(game.steamAppId);
+      
+      if (!steamDetails) {
+        console.warn(`Skipping game with invalid App ID: ${game.steamAppId}`);
+        continue;
+      }
+      
       const ggDealsInfo = await fetchGGDealsInfo(steamDetails.title);
       
       game.title = steamDetails.title;
@@ -136,10 +190,12 @@ export const getGameRecommendations = async (answers: QuizAnswers): Promise<Reco
       game.steamPrice = steamDetails.steamPrice;
       game.cheapestPrice = ggDealsInfo.cheapestPrice;
       game.dealUrl = ggDealsInfo.dealUrl;
+      
+      enrichedGames.push(game);
     }
 
     return {
-      recommendations,
+      recommendations: enrichedGames,
       accuracy: parsed.accuracy || { percentage: 0, reasoning: "Evaluation failed." }
     };
   } catch (err) {
@@ -154,7 +210,7 @@ export const searchSpecificGame = async (query: string): Promise<GameRecommendat
 
   const ai = new GoogleGenAI({ apiKey });
 
-  const prompt = `Find the video game "${query}". Provide its exact Steam App ID and HowLongToBeat playtimes.`;
+  const prompt = `Find the video game "${query}". Provide its exact VALID Steam App ID that exists on Steam, and accurate HowLongToBeat playtimes.`;
   
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-lite",
@@ -179,6 +235,11 @@ export const searchSpecificGame = async (query: string): Promise<GameRecommendat
   const game = JSON.parse(response.text || '{}');
   
   const steamDetails = await fetchSteamGameDetails(game.steamAppId);
+  
+  if (!steamDetails) {
+    throw new Error(`Could not find game data for: ${query}`);
+  }
+  
   const ggDealsInfo = await fetchGGDealsInfo(steamDetails.title);
   
   game.title = steamDetails.title;
