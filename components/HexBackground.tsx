@@ -1,153 +1,101 @@
-import React, { useMemo, useEffect, useState } from 'react';
 
-// Pool of Steam App IDs for hexagonal background tiles
-const STEAM_APP_IDS = [
-  '1091500', // Cyberpunk 2077
-  '1174180', // Red Dead Redemption 2
-  '1245620', // Elden Ring
-  '1237970', // Titanfall 2
-  '813780',  // Age of Empires II: Definitive Edition
-  '730',     // Counter-Strike 2
-  '570',     // Dota 2
-  '1086940', // Baldur's Gate 3
-  '271590',  // Grand Theft Auto V
-  '292030',  // The Witcher 3
-  '1203220', // NARAKA: BLADEPOINT
-  '582010',  // Monster Hunter: World
-  '236390',  // War Thunder
-  '489830',  // The Elder Scrolls V: Skyrim Special Edition
-  '1172470', // Apex Legends
-  '413150',  // Stardew Valley
-  '381210',  // Dead by Daylight
-  '774361',  // Temtem
-  '460930',  // Tom Clancy's Rainbow Six Siege
-  '945360',  // Among Us
-  '252490',  // Rust
-  '440',     // Team Fortress 2
-  '1938090', // Call of Duty
-  '578080',  // PUBG: BATTLEGROUNDS
-  '1172380', // Star Wars Jedi: Fallen Order
-  '1085660', // Destiny 2
-  '220',     // Half-Life 2
-  '400',     // Portal 2
-  '620',     // Portal
-  '892970',  // Valheim
+import React, { useMemo, useState, useEffect } from 'react';
+
+// Massive pool of Steam App IDs to ensure a huge variety
+const HEX_GAMES_POOL = [
+  '1245620', '1091500', '1086940', '271590', '1174180', '489830', '377160', '570', '440', '730', 
+  '252490', '346110', '292030', '1145360', '1938090', '582010', '236430', '374320', '814380', '1446780', 
+  '400', '620', '218620', '413150', '105600', '211820', '219740', '200710', '201810', '220', '240', 
+  '322330', '367520', '381210', '431960', '435150', '444090', '444200', '47000', '476600', 
+  '534380', '550', '578080', '632360', '646570', '739630', '782330', '812140', '883710', '892970', 
+  '945360', '960090', '976730', '1151640', '1172470', '1238810', '1238840', '1284190', 
+  '1313860', '1426210', '1449850', '1466860', '1506830', '1593500', '1659040', '1811260', '1817070', 
+  '1817190', '1966720', '2050650', '2124490', '227300', '230410', '232090', '23310', '236850', '238960', 
+  '239140', '242760', '250900', '252950', '261550', '264710', '268500', '275850', '281990', '289070', 
+  '291550', '294100', '304050', '304930', '306130', '311690', '359550', '365360', '410320', '424840',
+  '427520', '433340', '438640', '444090', '466560', '480490', '482400', '487000', '495200', '504230'
 ];
 
-interface HexTile {
-  id: string;
-  appId: string;
-  delay: number;
-}
-
 const HexBackground: React.FC = () => {
-  const [activeTiles, setActiveTiles] = useState<Set<string>>(new Set());
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const [activeIds, setActiveIds] = useState<Set<string>>(new Set());
 
-  // Detect touch device
-  useEffect(() => {
-    setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
-  }, []);
-
-  // Generate hex grid data
-  const hexGrid = useMemo(() => {
-    const rows = 15;
-    const colsPerRow = 25;
-    const grid: HexTile[][] = [];
-
-    for (let row = 0; row < rows; row++) {
-      const rowTiles: HexTile[] = [];
-      const cols = row % 2 === 0 ? colsPerRow : colsPerRow - 1;
-      
-      for (let col = 0; col < cols; col++) {
-        const index = row * colsPerRow + col;
-        // Use deterministic assignment to avoid repetition patterns
-        const appId = STEAM_APP_IDS[index % STEAM_APP_IDS.length];
-        rowTiles.push({
-          id: `hex-${row}-${col}`,
-          appId,
-          delay: (row * 0.05) + (col * 0.03),
-        });
-      }
-      grid.push(rowTiles);
-    }
+  const gridData = useMemo(() => {
+    const rows = 30; 
+    const cols = 30;
     
-    return grid;
+    // Create a deterministic but "shuffled" 2D array of game IDs
+    // We want to avoid neighbors having the same ID.
+    const getShuffledId = (r: number, c: number) => {
+        // Use a simple hash to select a game from the pool so it feels random 
+        // but prevents linear repetition patterns
+        const hash = (r * 127 + c * 13) % HEX_GAMES_POOL.length;
+        return HEX_GAMES_POOL[hash];
+    };
+
+    return Array.from({ length: rows }).map((_, r) => 
+      Array.from({ length: cols }).map((_, c) => {
+        return {
+          id: `hex-${r}-${c}`,
+          appId: getShuffledId(r, c),
+          initialOpacity: Math.random() * 0.15 + 0.1,
+          delay: Math.random() * 5 
+        };
+      })
+    );
   }, []);
 
-  // Touch device glance behavior - periodically reveal random tiles
   useEffect(() => {
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     if (!isTouchDevice) return;
 
-    const glanceInterval = setInterval(() => {
-      // Get all hex tile IDs
-      const allTileIds = hexGrid.flat().map(tile => tile.id);
-      
-      // Select 3-5 random tiles to reveal
-      const numTilesToReveal = Math.floor(Math.random() * 3) + 3;
-      const newActiveTiles = new Set<string>();
-      
-      for (let i = 0; i < numTilesToReveal; i++) {
-        const randomIndex = Math.floor(Math.random() * allTileIds.length);
-        newActiveTiles.add(allTileIds[randomIndex]);
+    // Mobile "Glance" logic - occasionally reveal games automatically
+    const interval = setInterval(() => {
+      const newActive = new Set<string>();
+      for (let i = 0; i < 3; i++) {
+        const randRow = Math.floor(Math.random() * 30);
+        const randCol = Math.floor(Math.random() * 30);
+        newActive.add(`hex-${randRow}-${randCol}`);
       }
       
-      setActiveTiles(newActiveTiles);
-      
-      // Clear active tiles after 2 seconds
+      setActiveIds(prev => new Set([...prev, ...newActive]));
+
       setTimeout(() => {
-        setActiveTiles(new Set());
-      }, 2000);
-    }, 5000); // Glance every 5 seconds
+        setActiveIds(prev => {
+          const next = new Set(prev);
+          newActive.forEach(id => next.delete(id));
+          return next;
+        });
+      }, 1500);
 
-    return () => clearInterval(glanceInterval);
-  }, [isTouchDevice, hexGrid]);
+    }, 2500); 
 
-  // Mouse move handler for desktop
-  const handleMouseMove = (e: React.MouseEvent, tileId: string) => {
-    if (isTouchDevice) return;
-    
-    setActiveTiles(prev => {
-      const newSet = new Set(prev);
-      newSet.add(tileId);
-      return newSet;
-    });
-  };
-
-  const handleMouseLeave = (tileId: string) => {
-    if (isTouchDevice) return;
-    
-    setActiveTiles(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(tileId);
-      return newSet;
-    });
-  };
-
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    e.currentTarget.style.display = 'none';
-  };
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="hex-wrapper">
       <div className="hex-grid">
-        {hexGrid.map((row, rowIndex) => (
-          <div key={`row-${rowIndex}`} className="hex-row">
-            {row.map(tile => (
-              <div
-                key={tile.id}
-                className={`hex ${activeTiles.has(tile.id) ? 'active' : ''}`}
-                onMouseEnter={(e) => handleMouseMove(e, tile.id)}
-                onMouseLeave={() => handleMouseLeave(tile.id)}
+        {gridData.map((row, rIdx) => (
+          <div key={`row-${rIdx}`} className="hex-row">
+            {row.map((cell) => (
+              <div 
+                key={cell.id} 
+                className={`hex ${activeIds.has(cell.id) ? 'active' : ''}`}
+                style={{ 
+                  opacity: cell.initialOpacity,
+                  '--delay': cell.delay
+                } as React.CSSProperties}
               >
                 <div className="hex-content">
-                  <img
-                    src={`https://cdn.akamai.steamstatic.com/steam/apps/${tile.appId}/header.jpg`}
+                  <img 
+                    src={`https://cdn.akamai.steamstatic.com/steam/apps/${cell.appId}/header.jpg`}
+                    className="hex-image"
                     alt=""
-                    className="hex-image loaded"
                     loading="lazy"
-                    style={{ '--delay': `${tile.delay}s` } as React.CSSProperties}
-                    onError={handleImageError}
+                    onError={(e) => {
+                        // Fallback if a specific Steam asset is missing
+                        (e.target as HTMLImageElement).style.opacity = '0';
+                    }}
                   />
                 </div>
               </div>
@@ -155,7 +103,7 @@ const HexBackground: React.FC = () => {
           </div>
         ))}
       </div>
-      <div className="vignette"></div>
+      <div className="vignette" />
     </div>
   );
 };
