@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { QuizAnswers, RecommendationResponse, GameRecommendation } from "../types";
+import { HowLongToBeatService } from 'howlongtobeat';
 
 const GAME_SCHEMA = {
   type: Type.OBJECT,
@@ -13,12 +14,10 @@ const GAME_SCHEMA = {
           steamAppId: { type: Type.STRING, description: "The numeric Steam App ID." },
           genres: { type: Type.ARRAY, items: { type: Type.STRING } },
           tags: { type: Type.ARRAY, items: { type: Type.STRING } },
-          mainStoryTime: { type: Type.NUMBER },
-          completionistTime: { type: Type.NUMBER },
           suitabilityScore: { type: Type.NUMBER },
           reasonForPick: { type: Type.STRING }
         },
-        required: ["id", "steamAppId", "mainStoryTime", "completionistTime", "suitabilityScore", "reasonForPick"]
+        required: ["id", "steamAppId", "suitabilityScore", "reasonForPick"]
       }
     },
     accuracy: {
@@ -38,8 +37,10 @@ const CORS_PROXIES = [
   (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
   (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
   (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-  (url: string) => url // Try direct fetch as last resort
+  (url: string) => url
 ];
+
+const hltbService = new HowLongToBeatService();
 
 const getSteamImageUrl = (steamAppId: string): string => {
   return `https://cdn.akamai.steamstatic.com/steam/apps/${steamAppId}/header.jpg`;
@@ -57,14 +58,13 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 const fetchSteamGameDetails = async (steamAppId: string) => {
   const steamUrl = `https://store.steampowered.com/api/appdetails?appids=${steamAppId}&cc=us`;
   
-  // Try each proxy in sequence
   for (let i = 0; i < CORS_PROXIES.length; i++) {
     try {
       const proxyUrl = CORS_PROXIES[i](steamUrl);
       console.log(`Attempting Steam fetch for ${steamAppId} using proxy ${i + 1}/${CORS_PROXIES.length}`);
       
       const response = await fetch(proxyUrl, {
-        signal: AbortSignal.timeout(10000) // 10 second timeout
+        signal: AbortSignal.timeout(10000)
       });
       
       if (!response.ok) {
@@ -95,41 +95,62 @@ const fetchSteamGameDetails = async (steamAppId: string) => {
     } catch (error) {
       console.warn(`Proxy ${i + 1} error for ${steamAppId}:`, error.message);
       
-      // If not the last proxy, continue to next
       if (i < CORS_PROXIES.length - 1) {
-        await delay(500); // Small delay before trying next proxy
+        await delay(500);
         continue;
       }
     }
   }
   
-  // All proxies failed
   console.error(`All proxies failed for Steam App ID: ${steamAppId}`);
   return null;
+};
+
+const fetchHLTBData = async (gameTitle: string) => {
+  try {
+    console.log(`Fetching HLTB data for: ${gameTitle}`);
+    const results = await hltbService.search(gameTitle);
+    
+    if (!results || results.length === 0) {
+      console.warn(`No HLTB data found for: ${gameTitle}`);
+      return { mainStoryTime: 0, completionistTime: 0 };
+    }
+    
+    // Find best match based on similarity
+    const bestMatch = results.reduce((best, current) => 
+      current.similarity > best.similarity ? current : best
+    );
+    
+    console.log(`✅ Found HLTB match: ${bestMatch.name} (${bestMatch.similarity}% similar)`);
+    
+    return {
+      mainStoryTime: Math.round(bestMatch.gameplayMain || 0),
+      completionistTime: Math.round(bestMatch.gameplayCompletionist || 0)
+    };
+  } catch (error) {
+    console.error(`HLTB error for ${gameTitle}:`, error);
+    return { mainStoryTime: 0, completionistTime: 0 };
+  }
 };
 
 const fetchGGDealsInfo = async (steamAppId: string, title: string) => {
   const ggDealsApiKey = import.meta.env.VITE_GGDEALS_API_KEY || '';
   
-  // Fallback with slug generation
   let cheapestPrice = "View Deals";
   let dealUrl = `https://gg.deals/game/${createGGDealsSlug(title)}/`;
 
   if (ggDealsApiKey) {
     try {
-      // Search by Steam App ID (much more reliable!)
       const ggResponse = await fetch(`https://api.gg.deals/v1/games?key=${ggDealsApiKey}&steamAppId=${steamAppId}`);
       const ggData = await ggResponse.json();
       
       if (ggData.data && ggData.data.length > 0) {
         const gameData = ggData.data[0];
         
-        // Get the correct gg.deals URL
         if (gameData.url) {
           dealUrl = `https://gg.deals${gameData.url}`;
         }
         
-        // Get cheapest price
         if (gameData.price?.amount) {
           cheapestPrice = `$${gameData.price.amount}`;
         }
@@ -159,7 +180,7 @@ export const getGameRecommendations = async (answers: QuizAnswers): Promise<Reco
     - Availability: ${answers.timeAvailability}
     - Keywords: ${answers.specificKeywords}
     
-    CRITICAL: Provide EXACT VALID Steam App IDs that exist on Steam. Use accurate HowLongToBeat times. Score 0-100 based on preference match.`;
+    CRITICAL: Provide EXACT VALID Steam App IDs that exist on Steam. Score 0-100 based on preference match. Explain why each game fits.`;
 
   try {
     const response = await ai.models.generateContent({
@@ -187,6 +208,8 @@ export const getGameRecommendations = async (answers: QuizAnswers): Promise<Reco
         continue;
       }
       
+      // Fetch real HLTB data
+      const hltbData = await fetchHLTBData(steamDetails.title);
       const ggDealsInfo = await fetchGGDealsInfo(game.steamAppId, steamDetails.title);
       
       game.title = steamDetails.title;
@@ -196,6 +219,8 @@ export const getGameRecommendations = async (answers: QuizAnswers): Promise<Reco
       game.steamPrice = steamDetails.steamPrice;
       game.cheapestPrice = ggDealsInfo.cheapestPrice;
       game.dealUrl = ggDealsInfo.dealUrl;
+      game.mainStoryTime = hltbData.mainStoryTime;
+      game.completionistTime = hltbData.completionistTime;
       
       enrichedGames.push(game);
     }
@@ -216,7 +241,7 @@ export const searchSpecificGame = async (query: string): Promise<GameRecommendat
 
   const ai = new GoogleGenAI({ apiKey });
 
-  const prompt = `Find the video game "${query}". Provide its exact VALID Steam App ID that exists on Steam, and accurate HowLongToBeat playtimes.`;
+  const prompt = `Find the video game "${query}". Provide its exact VALID Steam App ID that exists on Steam.`;
   
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-lite",
@@ -228,12 +253,10 @@ export const searchSpecificGame = async (query: string): Promise<GameRecommendat
         properties: {
           id: { type: Type.STRING },
           steamAppId: { type: Type.STRING },
-          mainStoryTime: { type: Type.NUMBER },
-          completionistTime: { type: Type.NUMBER },
           suitabilityScore: { type: Type.NUMBER },
           reasonForPick: { type: Type.STRING }
         },
-        required: ["id", "steamAppId", "mainStoryTime", "completionistTime", "reasonForPick"]
+        required: ["id", "steamAppId", "reasonForPick"]
       },
     },
   });
@@ -246,6 +269,7 @@ export const searchSpecificGame = async (query: string): Promise<GameRecommendat
     throw new Error(`Could not find game data for: ${query}`);
   }
   
+  const hltbData = await fetchHLTBData(steamDetails.title);
   const ggDealsInfo = await fetchGGDealsInfo(game.steamAppId, steamDetails.title);
   
   game.title = steamDetails.title;
@@ -255,6 +279,8 @@ export const searchSpecificGame = async (query: string): Promise<GameRecommendat
   game.steamPrice = steamDetails.steamPrice;
   game.cheapestPrice = ggDealsInfo.cheapestPrice;
   game.dealUrl = ggDealsInfo.dealUrl;
+  game.mainStoryTime = hltbData.mainStoryTime;
+  game.completionistTime = hltbData.completionistTime;
   
   return game;
 };
