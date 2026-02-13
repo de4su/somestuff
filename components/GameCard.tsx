@@ -5,24 +5,42 @@ interface GameCardProps {
   game: GameRecommendation;
 }
 
+interface SteamMedia {
+  microtrailer: string | null;
+  screenshots: string[];
+}
+
 const GameCard: React.FC<GameCardProps> = ({ game }) => {
   const [isHovered, setIsHovered] = useState(false);
+
+  const [media, setMedia] = useState<SteamMedia>({
+    microtrailer: null,
+    screenshots: [],
+  });
+
+  const [mediaLoaded, setMediaLoaded] = useState(false);
+  const [mediaError, setMediaError] = useState(false);
+  const [mediaRequested, setMediaRequested] = useState(false);
+
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
+
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // PROXIED media URLs (through Vercel API)
-  const imageBase = `/api/steam-media?media=image&appid=${game.steamAppId}`;
-  const imageUrls = [
-    `${imageBase}&variant=header`,
-    `${imageBase}&variant=capsule`,
-    `${imageBase}&variant=library`,
-  ];
+  // Fallback static image if we never get screenshots
+  const fallbackStatic = `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/header.jpg`;
 
-  // Try webm via proxy; you can also try mp4 as a backup if you want
-  const videoTrailer = `/api/steam-media?media=microtrailer&appid=${game.steamAppId}`;
+  // Build final list of slideshow images (deduped)
+  const imageUrls: string[] = React.useMemo(() => {
+    const list = media.screenshots.length > 0 ? media.screenshots : [fallbackStatic];
+
+    // De-duplicate in case Steam returns same path multiple times
+    return Array.from(new Set(list));
+  }, [media.screenshots, fallbackStatic]);
+
+  const videoTrailer = media.microtrailer || '';
 
   const storeUrl = `https://store.steampowered.com/app/${game.steamAppId}`;
 
@@ -32,9 +50,34 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
     return 'text-yellow-400 border-yellow-500 bg-yellow-500/20';
   };
 
-  // Video loading with fallback
+  // 1) On first hover, fetch media metadata from our Vercel API
   useEffect(() => {
-    if (isHovered && !videoFailed && videoRef.current) {
+    if (!isHovered) return;
+    if (mediaRequested || mediaLoaded || mediaError) return;
+
+    setMediaRequested(true);
+
+    fetch(`/api/steam-appdetails?appid=${game.steamAppId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch media');
+        return res.json();
+      })
+      .then((data: SteamMedia) => {
+        setMedia({
+          microtrailer: data.microtrailer,
+          screenshots: data.screenshots || [],
+        });
+        setMediaLoaded(true);
+      })
+      .catch((err) => {
+        console.error('Steam media fetch error for app', game.steamAppId, err);
+        setMediaError(true);
+      });
+  }, [isHovered, mediaRequested, mediaLoaded, mediaError, game.steamAppId]);
+
+  // 2) Try to play video when hovered and we have a microtrailer
+  useEffect(() => {
+    if (isHovered && media.microtrailer && !videoFailed && videoRef.current) {
       const playPromise = videoRef.current.play();
       if (playPromise !== undefined) {
         playPromise
@@ -49,11 +92,14 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
       videoRef.current.currentTime = 0;
       setVideoLoaded(false);
     }
-  }, [isHovered, videoFailed]);
+  }, [isHovered, media.microtrailer, videoFailed]);
 
-  // Slideshow when video fails or while loading
+  // 3) Slideshow when no video or video failed
   useEffect(() => {
-    if (isHovered && (videoFailed || !videoLoaded)) {
+    const shouldRunSlideshow =
+      isHovered && (!media.microtrailer || videoFailed || !videoLoaded);
+
+    if (shouldRunSlideshow && imageUrls.length > 1) {
       intervalRef.current = setInterval(() => {
         setCurrentImageIndex((prev) => (prev + 1) % imageUrls.length);
       }, 1500);
@@ -70,46 +116,48 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isHovered, videoFailed, videoLoaded, imageUrls.length]);
+  }, [isHovered, media.microtrailer, videoFailed, videoLoaded, imageUrls.length]);
 
   return (
-    <div 
+    <div
       className="steam-card rounded-2xl overflow-hidden flex flex-col h-full group shadow-2xl relative"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="relative h-56 w-full overflow-hidden bg-black group-hover:shadow-[0_0_30px_rgba(102,192,244,0.3)] transition-all duration-500">
-        {/* Slideshow images via proxy */}
+        {/* Slideshow images (from appdetails screenshots, deduped) */}
         {imageUrls.map((url, idx) => (
-          <img 
+          <img
             key={idx}
-            src={url} 
-            alt={`${game.title} ${idx}`}
+            src={url}
+            alt={`${game.title} screenshot ${idx + 1}`}
             loading="lazy"
             onError={(e) => {
-              // If a particular variant 404s, hide that element
+              // if a screenshot fails, hide it
               e.currentTarget.style.display = 'none';
             }}
             className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-in-out ${
-              isHovered && (videoFailed || !videoLoaded) && idx === currentImageIndex
+              isHovered &&
+              (!media.microtrailer || videoFailed || !videoLoaded) &&
+              idx === currentImageIndex
                 ? 'scale-110 opacity-100'
-                : idx === 0 && !isHovered
+                : !isHovered && idx === 0
                 ? 'scale-100 opacity-100'
                 : 'opacity-0 scale-105'
             }`}
             style={{ zIndex: idx === currentImageIndex ? 2 : 1 }}
           />
         ))}
-        
-        {/* Video layer via proxy */}
-        {!videoFailed && (
-          <video 
+
+        {/* Microtrailer video if available */}
+        {media.microtrailer && !videoFailed && (
+          <video
             ref={videoRef}
+            src={videoTrailer}
             muted
             loop
             playsInline
             preload="none"
-            src={videoTrailer}
             onError={() => {
               setVideoFailed(true);
             }}
@@ -127,8 +175,8 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
           </div>
         )}
 
-        {/* Slideshow indicator */}
-        {isHovered && (videoFailed || !videoLoaded) && (
+        {/* Gallery badge when using screenshots */}
+        {isHovered && (!media.microtrailer || videoFailed || !videoLoaded) && imageUrls.length > 1 && (
           <div className="absolute top-4 right-4 flex items-center gap-2 px-2 py-1 bg-black/60 backdrop-blur-md border border-blue-500/50 rounded text-[10px] font-black text-white z-20">
             <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
             GALLERY
@@ -136,19 +184,23 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
         )}
 
         {/* Match score */}
-        <div className={`absolute top-4 left-4 px-3 py-1 rounded-md border font-black text-xs z-10 backdrop-blur-xl ${getScoreColor(game.suitabilityScore)} shadow-lg`}>
+        <div
+          className={`absolute top-4 left-4 px-3 py-1 rounded-md border font-black text-xs z-10 backdrop-blur-xl ${getScoreColor(
+            game.suitabilityScore
+          )} shadow-lg`}
+        >
           {game.suitabilityScore}% MATCH
         </div>
 
-        {/* Loading spinner while video tries */}
-        {isHovered && !videoLoaded && !videoFailed && (
+        {/* Spinner while we’re trying to play video (first hover) */}
+        {isHovered && media.microtrailer && !videoLoaded && !videoFailed && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm z-10">
             <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
           </div>
         )}
       </div>
-      
-      {/* Rest of your card unchanged */}
+
+      {/* --- rest of your card unchanged --- */}
       <div className="p-6 flex flex-col flex-grow">
         <div className="flex justify-between items-start mb-4">
           <h3 className="text-xl font-black text-white group-hover:text-blue-400 transition-colors line-clamp-2 uppercase tracking-tight flex-1">
@@ -158,14 +210,18 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
 
         <div className="grid grid-cols-2 gap-px bg-white/5 border border-white/5 rounded-xl overflow-hidden mb-6">
           <div className="bg-[#1b2838]/80 p-4 flex flex-col items-center">
-            <div className="text-[9px] text-blue-400/70 font-black uppercase tracking-[0.2em] mb-1">Main Quest</div>
+            <div className="text-[9px] text-blue-400/70 font-black uppercase tracking-[0.2em] mb-1">
+              Main Quest
+            </div>
             <div className="text-2xl font-stats text-white leading-none">
               {game.mainStoryTime}
               <span className="text-xs text-blue-500 font-normal ml-0.5">hrs</span>
             </div>
           </div>
           <div className="bg-[#1b2838]/80 p-4 flex flex-col items-center">
-            <div className="text-[9px] text-purple-400/70 font-black uppercase tracking-[0.2em] mb-1">Completionist</div>
+            <div className="text-[9px] text-purple-400/70 font-black uppercase tracking-[0.2em] mb-1">
+              Completionist
+            </div>
             <div className="text-2xl font-stats text-white leading-none">
               {game.completionistTime}
               <span className="text-xs text-purple-500 font-normal ml-0.5">hrs</span>
@@ -180,23 +236,31 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
         <div className="mt-auto flex flex-col gap-3">
           <div className="flex items-start gap-3 p-3 bg-blue-500/5 rounded-lg border border-blue-500/10 group-hover:border-blue-500/30 transition-colors mb-2">
             <div className="bg-blue-600 p-1 rounded shrink-0">
-               <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M13 10V3L4 14h7v7l9-11h-7z" />
-               </svg>
+              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
             </div>
-            <p className="text-[11px] text-blue-300/80 font-semibold leading-tight">{game.reasonForPick}</p>
+            <p className="text-[11px] text-blue-300/80 font-semibold leading-tight">
+              {game.reasonForPick}
+            </p>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-2">
-            <button 
-              onClick={(e) => { e.stopPropagation(); window.open(storeUrl, '_blank'); }}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(storeUrl, '_blank');
+              }}
               className="py-3 bg-[#66c0f4]/10 hover:bg-[#66c0f4]/20 border border-[#66c0f4]/20 rounded-lg text-[10px] font-black text-[#66c0f4] hover:text-white uppercase tracking-wider transition-all flex flex-col items-center justify-center gap-0.5"
             >
               <span>STEAM</span>
               <span className="text-white text-xs">{game.steamPrice || 'CHECK'}</span>
             </button>
-            <button 
-              onClick={(e) => { e.stopPropagation(); if (game.dealUrl) window.open(game.dealUrl, '_blank'); }}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (game.dealUrl) window.open(game.dealUrl, '_blank');
+              }}
               className="py-3 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 rounded-lg text-[10px] font-black text-green-400 hover:text-white uppercase tracking-wider transition-all flex flex-col items-center justify-center gap-0.5"
             >
               <span>CHEAPEST</span>
