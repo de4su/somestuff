@@ -95,7 +95,7 @@ export const searchSpecificGame = async (query: string): Promise<GameRecommendat
 
   const prompt = `Search for the specific video game "${query}". Retrieve its numeric steamAppId, official developer, playtimes (main story/completionist), official Steam price, and absolute cheapest price on gg.deals with the link.`;
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash-lite",
+    model: "gemini-3-flash-preview",
     contents: prompt,
     config: {
       responseMimeType: "application/json",
