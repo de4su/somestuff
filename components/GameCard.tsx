@@ -8,10 +8,20 @@ interface GameCardProps {
 const GameCard: React.FC<GameCardProps> = ({ game }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const staticImage = `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/header.jpg`;
-  const videoTrailer = `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/microtrailer.mp4`;
+  // Multiple image sources for slideshow
+  const imageUrls = [
+    `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/header.jpg`,
+    `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/capsule_616x353.jpg`,
+    `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/library_600x900.jpg`,
+    `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.steamAppId}/header.jpg`,
+  ];
+
+  const videoTrailer = `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/microtrailer.webm`;
   const storeUrl = `https://store.steampowered.com/app/${game.steamAppId}`;
 
   const getScoreColor = (score: number) => {
@@ -20,15 +30,45 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
     return 'text-yellow-400 border-yellow-500 bg-yellow-500/20';
   };
 
+  // Video loading with fallback
   useEffect(() => {
-    if (isHovered && videoRef.current) {
-      videoRef.current.play().then(() => setVideoLoaded(true)).catch(() => {});
-    } else if (videoRef.current) {
+    if (isHovered && !videoFailed && videoRef.current) {
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => setVideoLoaded(true))
+          .catch(() => {
+            setVideoFailed(true);
+            setVideoLoaded(false);
+          });
+      }
+    } else if (!isHovered && videoRef.current) {
       videoRef.current.pause();
       videoRef.current.currentTime = 0;
       setVideoLoaded(false);
     }
-  }, [isHovered]);
+  }, [isHovered, videoFailed]);
+
+  // Slideshow when video fails or while loading
+  useEffect(() => {
+    if (isHovered && (videoFailed || !videoLoaded)) {
+      intervalRef.current = setInterval(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % imageUrls.length);
+      }, 1500); // Change image every 1.5s
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      setCurrentImageIndex(0);
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [isHovered, videoFailed, videoLoaded, imageUrls.length]);
 
   return (
     <div 
@@ -37,21 +77,40 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="relative h-56 w-full overflow-hidden bg-black group-hover:shadow-[0_0_30px_rgba(102,192,244,0.3)] transition-all duration-500">
-        <img 
-          src={staticImage} 
-          alt={game.title}
-          className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-in-out ${isHovered ? 'scale-110 opacity-40 blur-sm' : 'scale-100 opacity-100 blur-0'}`}
-        />
+        {/* Slideshow images */}
+        {imageUrls.map((url, idx) => (
+          <img 
+            key={idx}
+            src={url} 
+            alt={`${game.title} ${idx}`}
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-in-out ${
+              isHovered && (videoFailed || !videoLoaded) && idx === currentImageIndex
+                ? 'scale-110 opacity-100'
+                : idx === 0 && !isHovered
+                ? 'scale-100 opacity-100'
+                : 'opacity-0 scale-105'
+            }`}
+            style={{ zIndex: idx === currentImageIndex ? 2 : 1 }}
+          />
+        ))}
         
-        <video 
-          ref={videoRef}
-          src={videoTrailer}
-          muted
-          loop
-          playsInline
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${isHovered && videoLoaded ? 'opacity-100' : 'opacity-0'}`}
-        />
+        {/* Video layer */}
+        {!videoFailed && (
+          <video 
+            ref={videoRef}
+            src={videoTrailer}
+            muted
+            loop
+            playsInline
+            onError={() => setVideoFailed(true)}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
+              isHovered && videoLoaded ? 'opacity-100 z-10' : 'opacity-0 z-0'
+            }`}
+          />
+        )}
 
+        {/* Live preview badge */}
         {isHovered && videoLoaded && (
           <div className="absolute top-4 right-4 flex items-center gap-2 px-2 py-1 bg-black/60 backdrop-blur-md border border-red-500/50 rounded text-[10px] font-black text-white z-20">
             <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse-red"></span>
@@ -59,11 +118,21 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
           </div>
         )}
 
+        {/* Slideshow indicator */}
+        {isHovered && (videoFailed || !videoLoaded) && (
+          <div className="absolute top-4 right-4 flex items-center gap-2 px-2 py-1 bg-black/60 backdrop-blur-md border border-blue-500/50 rounded text-[10px] font-black text-white z-20">
+            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+            GALLERY
+          </div>
+        )}
+
+        {/* Match score */}
         <div className={`absolute top-4 left-4 px-3 py-1 rounded-md border font-black text-xs z-10 backdrop-blur-xl ${getScoreColor(game.suitabilityScore)} shadow-lg`}>
           {game.suitabilityScore}% MATCH
         </div>
 
-        {isHovered && !videoLoaded && (
+        {/* Loading spinner */}
+        {isHovered && !videoLoaded && !videoFailed && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm z-10">
             <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
           </div>
