@@ -1,6 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { QuizAnswers, RecommendationResponse, GameRecommendation } from "../types";
-import { HowLongToBeatService } from 'howlongtobeat';
 
 const GAME_SCHEMA = {
   type: Type.OBJECT,
@@ -14,10 +13,12 @@ const GAME_SCHEMA = {
           steamAppId: { type: Type.STRING, description: "The numeric Steam App ID." },
           genres: { type: Type.ARRAY, items: { type: Type.STRING } },
           tags: { type: Type.ARRAY, items: { type: Type.STRING } },
+          mainStoryTime: { type: Type.NUMBER, description: "Realistic main story hours based on actual game" },
+          completionistTime: { type: Type.NUMBER, description: "Realistic 100% completion hours" },
           suitabilityScore: { type: Type.NUMBER },
           reasonForPick: { type: Type.STRING }
         },
-        required: ["id", "steamAppId", "suitabilityScore", "reasonForPick"]
+        required: ["id", "steamAppId", "mainStoryTime", "completionistTime", "suitabilityScore", "reasonForPick"]
       }
     },
     accuracy: {
@@ -39,8 +40,6 @@ const CORS_PROXIES = [
   (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
   (url: string) => url
 ];
-
-const hltbService = new HowLongToBeatService();
 
 const getSteamImageUrl = (steamAppId: string): string => {
   return `https://cdn.akamai.steamstatic.com/steam/apps/${steamAppId}/header.jpg`;
@@ -106,33 +105,6 @@ const fetchSteamGameDetails = async (steamAppId: string) => {
   return null;
 };
 
-const fetchHLTBData = async (gameTitle: string) => {
-  try {
-    console.log(`Fetching HLTB data for: ${gameTitle}`);
-    const results = await hltbService.search(gameTitle);
-    
-    if (!results || results.length === 0) {
-      console.warn(`No HLTB data found for: ${gameTitle}`);
-      return { mainStoryTime: 0, completionistTime: 0 };
-    }
-    
-    // Find best match based on similarity
-    const bestMatch = results.reduce((best, current) => 
-      current.similarity > best.similarity ? current : best
-    );
-    
-    console.log(`✅ Found HLTB match: ${bestMatch.name} (${bestMatch.similarity}% similar)`);
-    
-    return {
-      mainStoryTime: Math.round(bestMatch.gameplayMain || 0),
-      completionistTime: Math.round(bestMatch.gameplayCompletionist || 0)
-    };
-  } catch (error) {
-    console.error(`HLTB error for ${gameTitle}:`, error);
-    return { mainStoryTime: 0, completionistTime: 0 };
-  }
-};
-
 const fetchGGDealsInfo = async (steamAppId: string, title: string) => {
   const ggDealsApiKey = import.meta.env.VITE_GGDEALS_API_KEY || '';
   
@@ -173,14 +145,24 @@ export const getGameRecommendations = async (answers: QuizAnswers): Promise<Reco
 
   const ai = new GoogleGenAI({ apiKey });
 
-  const prompt = `Act as an expert Steam game curator. Suggest 6 video games available on Steam.
+  const prompt = `Act as an expert Steam game curator with deep knowledge of game lengths. Suggest 6 video games available on Steam.
+    
     User Preferences:
     - Genres: ${answers.preferredGenres.join(', ')}
     - Style: ${answers.playstyle}
     - Availability: ${answers.timeAvailability}
     - Keywords: ${answers.specificKeywords}
     
-    CRITICAL: Provide EXACT VALID Steam App IDs that exist on Steam. Score 0-100 based on preference match. Explain why each game fits.`;
+    CRITICAL REQUIREMENTS:
+    1. Provide EXACT VALID Steam App IDs that actually exist on Steam
+    2. Provide ACCURATE playtime estimates based on the real game's actual length:
+       - mainStoryTime = typical playthrough to see credits (main story only)
+       - completionistTime = 100% completion with all achievements/collectibles
+       - Example: Baldur's Gate 3 is ~50hrs main, ~150hrs completionist
+       - Example: Portal is ~3hrs main, ~6hrs completionist
+       - DO NOT make up random numbers - use your knowledge of each specific game
+    3. Score 0-100 based on how well the game matches user preferences
+    4. Explain why each game fits the user's preferences`;
 
   try {
     const response = await ai.models.generateContent({
@@ -208,8 +190,6 @@ export const getGameRecommendations = async (answers: QuizAnswers): Promise<Reco
         continue;
       }
       
-      // Fetch real HLTB data
-      const hltbData = await fetchHLTBData(steamDetails.title);
       const ggDealsInfo = await fetchGGDealsInfo(game.steamAppId, steamDetails.title);
       
       game.title = steamDetails.title;
@@ -219,8 +199,7 @@ export const getGameRecommendations = async (answers: QuizAnswers): Promise<Reco
       game.steamPrice = steamDetails.steamPrice;
       game.cheapestPrice = ggDealsInfo.cheapestPrice;
       game.dealUrl = ggDealsInfo.dealUrl;
-      game.mainStoryTime = hltbData.mainStoryTime;
-      game.completionistTime = hltbData.completionistTime;
+      // Keep playtimes from Gemini (they're now in the schema)
       
       enrichedGames.push(game);
     }
@@ -241,7 +220,7 @@ export const searchSpecificGame = async (query: string): Promise<GameRecommendat
 
   const ai = new GoogleGenAI({ apiKey });
 
-  const prompt = `Find the video game "${query}". Provide its exact VALID Steam App ID that exists on Steam.`;
+  const prompt = `Find the video game "${query}". Provide its exact VALID Steam App ID and ACCURATE playtime estimates based on the real game's actual length.`;
   
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-lite",
@@ -253,10 +232,12 @@ export const searchSpecificGame = async (query: string): Promise<GameRecommendat
         properties: {
           id: { type: Type.STRING },
           steamAppId: { type: Type.STRING },
+          mainStoryTime: { type: Type.NUMBER },
+          completionistTime: { type: Type.NUMBER },
           suitabilityScore: { type: Type.NUMBER },
           reasonForPick: { type: Type.STRING }
         },
-        required: ["id", "steamAppId", "reasonForPick"]
+        required: ["id", "steamAppId", "mainStoryTime", "completionistTime", "reasonForPick"]
       },
     },
   });
@@ -269,7 +250,6 @@ export const searchSpecificGame = async (query: string): Promise<GameRecommendat
     throw new Error(`Could not find game data for: ${query}`);
   }
   
-  const hltbData = await fetchHLTBData(steamDetails.title);
   const ggDealsInfo = await fetchGGDealsInfo(game.steamAppId, steamDetails.title);
   
   game.title = steamDetails.title;
@@ -279,8 +259,7 @@ export const searchSpecificGame = async (query: string): Promise<GameRecommendat
   game.steamPrice = steamDetails.steamPrice;
   game.cheapestPrice = ggDealsInfo.cheapestPrice;
   game.dealUrl = ggDealsInfo.dealUrl;
-  game.mainStoryTime = hltbData.mainStoryTime;
-  game.completionistTime = hltbData.completionistTime;
+  // Keep playtimes from Gemini
   
   return game;
 };
