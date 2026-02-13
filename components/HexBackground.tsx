@@ -1,14 +1,14 @@
 import React, { useMemo, useRef, useEffect, useCallback } from 'react';
 
 const HEX_GAMES_POOL = [
-  // your 100+ app IDs here - unchanged
+  // your app IDs - unchanged
 ];
 
 const HexBackground: React.FC = () => {
   const lastHoveredHexRef = useRef<HTMLElement | null>(null);
 
   const gridData = useMemo(() => {
-    const rows = 15;  // your 15x15
+    const rows = 15;
     const cols = 15;
 
     const getShuffledId = (r: number, c: number) => {
@@ -26,36 +26,32 @@ const HexBackground: React.FC = () => {
     );
   }, []);
 
-  // OPTIMIZED: throttle mousemove to 15 FPS (instead of 60)
+  // FIXED: Simpler throttling - direct RAF without performance.now()
   const handleMouseMove = useCallback((e: MouseEvent) => {
     const elementsAtPoint = document.elementsFromPoint(e.clientX, e.clientY);
     const hexElement = elementsAtPoint.find((el: Element) =>
-      (el as Element).classList?.contains('hex')
+      el.classList?.contains('hex')
     ) as HTMLElement | undefined;
 
-    if (hexElement !== lastHoveredHexRef.current) {
-      if (lastHoveredHexRef.current) {
-        lastHoveredHexRef.current.classList.remove('is-hovered');
-      }
-      if (hexElement) {
-        hexElement.classList.add('is-hovered');
-      }
-      lastHoveredHexRef.current = hexElement || null;
+    // Clear previous hover
+    if (lastHoveredHexRef.current) {
+      lastHoveredHexRef.current.classList.remove('is-hovered');
     }
+
+    // Set new hover
+    if (hexElement) {
+      hexElement.classList.add('is-hovered');
+    }
+
+    lastHoveredHexRef.current = hexElement || null;
   }, []);
 
   useEffect(() => {
     let rafId: number;
-    let lastCall = 0;
-
+    
     const throttledMouseMove = (e: MouseEvent) => {
-      const now = performance.now();
-      if (now - lastCall < 66) return; // ~15 FPS (1000/15 = 66ms)
-
-      rafId = requestAnimationFrame(() => {
-        handleMouseMove(e);
-        lastCall = performance.now();
-      });
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => handleMouseMove(e));
     };
 
     window.addEventListener('mousemove', throttledMouseMove);
@@ -87,7 +83,8 @@ const HexBackground: React.FC = () => {
                     alt=""
                     loading="lazy"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).style.opacity = '0';
+                      // FIXED: Don't hide on error, just stop trying to animate it
+                      (e.target as HTMLImageElement).style.opacity = '0.3';
                     }}
                   />
                 </div>
