@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { QuizAnswers, RecommendationResponse } from './types';
 import { getGameRecommendations, searchSpecificGame } from './services/geminiService';
@@ -49,14 +48,11 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen relative overflow-x-hidden">
-      {/* Interactive & Moving Background Layer */}
       <HexBackground />
 
-      {/* Main Content Layer - pointer-events-none allows clicks to hit the background hexes */}
-      <div className="relative z-10 min-h-screen flex flex-col pointer-events-none">
+      <div className="relative z-10 min-h-screen flex flex-col">
         
-        {/* Nav must be interactive */}
-        <nav className="p-6 border-b border-white/5 sticky top-0 bg-[#171a21]/70 backdrop-blur-2xl z-50 pointer-events-auto">
+        <nav className="p-6 border-b border-white/5 sticky top-0 bg-[#171a21]/70 backdrop-blur-2xl z-50">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
             <div 
               onClick={() => setView('welcome')} 
@@ -77,27 +73,24 @@ const App: React.FC = () => {
           </div>
         </nav>
 
-        {/* Main Content */}
         <main className="flex-grow max-w-7xl mx-auto px-6 py-12 w-full flex flex-col items-center justify-center">
           {view === 'welcome' && (
-            <div className="text-center py-20 animate-in fade-in slide-in-from-bottom-10 duration-700">
-              {/* Text is 'ghost-text' so hovering over it still triggers background hexagons */}
-              <h1 className="text-6xl md:text-8xl font-black text-white mb-6 tracking-tighter leading-none drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] ghost-text">
+            <div className="text-center py-20 welcome-fade-in">
+              <h1 className="text-6xl md:text-8xl font-black text-white mb-6 tracking-tighter leading-none drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] select-none">
                 DISCOVER YOUR<br/>
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">NEXT OBSESSION</span>
               </h1>
-              <p className="text-gray-300 mb-12 max-w-xl mx-auto text-lg font-medium bg-black/20 backdrop-blur-sm p-4 rounded-2xl border border-white/5 ghost-text">
+              <p className="text-gray-300 mb-12 max-w-xl mx-auto text-lg font-medium bg-black/40 backdrop-blur-sm p-4 rounded-2xl border border-white/5 select-none">
                 Our AI analyzes thousands of Steam titles to find games that match your specific playstyle and time constraints.
               </p>
-              {/* Button is 'pointer-events-auto' so it remains clickable */}
               <button 
                 onClick={() => setView('quiz')}
-                className="pointer-events-auto px-16 py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-full font-black text-xl shadow-[0_0_40px_rgba(37,99,235,0.4)] transition-all active:scale-95 hover:scale-110 active:shadow-none"
+                className="px-16 py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-full font-black text-xl shadow-[0_0_40px_rgba(37,99,235,0.4)] transition-all active:scale-95 hover:scale-110 active:shadow-none"
               >
                 START THE QUIZ
               </button>
               {error && (
-                <div className="mt-12 p-4 bg-red-950/40 border border-red-500/30 text-red-200 font-mono text-sm rounded-lg max-w-md mx-auto backdrop-blur-md ghost-text">
+                <div className="mt-12 p-4 bg-red-950/40 border border-red-500/30 text-red-200 font-mono text-sm rounded-lg max-w-md mx-auto backdrop-blur-md select-none">
                   {error}
                 </div>
               )}
@@ -105,7 +98,7 @@ const App: React.FC = () => {
           )}
 
           {view === 'loading' && (
-            <div className="py-40 text-center flex flex-col items-center animate-pulse ghost-text">
+            <div className="py-40 text-center flex flex-col items-center animate-pulse select-none">
               <div className="w-20 h-20 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-8 shadow-[0_0_30px_rgba(37,99,235,0.3)]"></div>
               <h3 className="text-2xl font-black text-white tracking-widest uppercase">Querying Steam Database...</h3>
               <p className="text-gray-500 mt-2">Determining playtimes and compatibility scores</p>
@@ -114,26 +107,26 @@ const App: React.FC = () => {
 
           {view === 'results' && results && (
             <div className="animate-results w-full">
-              <div className="mb-10 p-10 steam-card border-l-8 border-l-blue-600 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-8 shadow-2xl pointer-events-auto">
-                <div className="text-center md:text-left ghost-text">
+              <div className="mb-10 p-10 steam-card border-l-8 border-l-blue-600 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-8 shadow-2xl">
+                <div className="text-center md:text-left select-none">
                   <h2 className="text-3xl font-black text-white mb-2 uppercase tracking-tight">Curation Complete</h2>
                   <p className="text-gray-400 text-lg max-w-2xl font-medium leading-relaxed italic">
                     "{results.accuracy?.reasoning}"
                   </p>
                 </div>
-                <div className="flex flex-col items-center bg-blue-600/10 p-6 rounded-2xl border border-blue-500/20 ghost-text">
+                <div className="flex flex-col items-center bg-blue-600/10 p-6 rounded-2xl border border-blue-500/20 select-none">
                   <span className="text-6xl font-stats text-blue-500 drop-shadow-[0_0_10px_rgba(102,192,244,0.3)]">{results.accuracy?.percentage || 0}%</span>
                   <span className="text-[10px] font-black text-blue-500 tracking-widest mt-1">MATCH STRENGTH</span>
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pointer-events-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {results.recommendations.map((game, idx) => (
                   <GameCard key={game.id || idx} game={game} />
                 ))}
               </div>
 
-              <div className="mt-20 text-center pointer-events-auto">
+              <div className="mt-20 text-center">
                 <button 
                   onClick={() => setView('quiz')}
                   className="px-10 py-4 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-full transition-all text-sm font-black tracking-widest uppercase border border-white/5 backdrop-blur-xl"
@@ -145,7 +138,7 @@ const App: React.FC = () => {
           )}
 
           {view === 'quiz' && (
-            <div className="w-full pointer-events-auto">
+            <div className="w-full">
               <Quiz onComplete={handleQuizComplete} />
             </div>
           )}
