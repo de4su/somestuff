@@ -43,6 +43,76 @@
         video {
             object-fit: cover;
         }
+        
+        /* Hexagonal Background Styles */
+        .hex-wrapper {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+            pointer-events: none;
+        }
+        .hex-grid {
+            display: flex;
+            flex-direction: column;
+            margin-top: -20px;
+        }
+        .hex-row {
+            display: flex;
+            gap: 2px;
+            margin-top: -20px;
+        }
+        .hex-row:nth-child(even) {
+            margin-left: 58px;
+        }
+        .hex {
+            width: 115px;
+            height: 100px;
+            position: relative;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            background: rgba(27, 40, 56, 0.3);
+            transition: background 0.6s ease;
+        }
+        .hex.active {
+            background: rgba(27, 40, 56, 0.7);
+        }
+        .hex-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .hex-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+            animation: fadeInHex 0.8s ease forwards;
+            animation-delay: var(--delay, 0s);
+        }
+        .hex-image.loaded {
+            opacity: 0.4;
+        }
+        .hex.active .hex-image.loaded {
+            opacity: 0.8;
+        }
+        @keyframes fadeInHex {
+            from { opacity: 0; }
+            to { opacity: 0.4; }
+        }
+        .vignette {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at center, transparent 0%, rgba(27, 40, 56, 0.8) 70%);
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>

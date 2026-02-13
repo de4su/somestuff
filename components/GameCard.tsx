@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { GameRecommendation } from '../types.ts';
 
 interface GameCardProps {
@@ -7,8 +7,13 @@ interface GameCardProps {
 
 const GameCard: React.FC<GameCardProps> = ({ game }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  const [videoError, setVideoError] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const staticImage = `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/header.jpg`;
+  const microtrailerUrl = `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/microtrailer.mp4`;
   const storeUrl = `https://store.steampowered.com/app/${game.steamAppId}`;
 
   const getScoreColor = (score: number) => {
@@ -22,6 +27,37 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
     window.open(storeUrl, '_blank');
   };
 
+  // Handle video loading and playing on hover
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (isHovered && !videoError) {
+      setVideoLoading(true);
+      
+      // Attempt to load and play video
+      const playPromise = video.play();
+      
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setVideoLoading(false);
+            setVideoPlaying(true);
+          })
+          .catch(() => {
+            setVideoLoading(false);
+            setVideoError(true);
+            setVideoPlaying(false);
+          });
+      }
+    } else {
+      video.pause();
+      video.currentTime = 0;
+      setVideoPlaying(false);
+      setVideoLoading(false);
+    }
+  }, [isHovered, videoError]);
+
   return (
     <div 
       className="steam-card rounded-lg overflow-hidden flex flex-col h-full group border border-white/5 hover:border-blue-500/30 cursor-pointer shadow-lg"
@@ -30,12 +66,42 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
       onClick={handleCardClick}
     >
       <div className="relative h-56 w-full overflow-hidden bg-black">
+        {/* Static header image */}
         <img 
           src={staticImage} 
           alt={game.title}
           className="w-full h-full object-cover"
           loading="lazy"
         />
+        
+        {/* Video microtrailer overlay */}
+        {!videoError && (
+          <video
+            ref={videoRef}
+            src={microtrailerUrl}
+            className={`absolute top-0 left-0 w-full h-full object-cover transition-opacity duration-300 ${
+              videoPlaying ? 'opacity-100' : 'opacity-0'
+            }`}
+            loop
+            muted
+            playsInline
+            onError={() => setVideoError(true)}
+          />
+        )}
+        
+        {/* Loading spinner */}
+        {videoLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        )}
+        
+        {/* LIVE PREVIEW badge */}
+        {videoPlaying && (
+          <div className="absolute top-0 right-0 m-4 px-3 py-1.5 rounded bg-red-600 border-2 border-red-400 text-white text-xs font-black uppercase tracking-wider animate-pulse">
+            🔴 LIVE PREVIEW
+          </div>
+        )}
         
         <div className={`absolute top-0 left-0 m-4 px-3 py-1.5 rounded border-2 text-base font-black z-10 shadow-2xl backdrop-blur-md ${getScoreColor(game.suitabilityScore)}`}>
           {game.suitabilityScore}%
