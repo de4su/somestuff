@@ -32,7 +32,7 @@ const Quiz: React.FC<QuizProps> = ({ onComplete }) => {
   return (
     <div className="max-w-2xl mx-auto steam-card p-8 rounded-xl shadow-2xl quiz-fade-in">
       <div className="mb-8">
-        <div className="flex justify-between text-xs font-black text-blue-500 mb-3 tracking-widest uppercase select-none">
+        <div className="flex justify-between text-xs font-black text-blue-500 mb-3 tracking-widest uppercase">
           <span>Phase {step + 1} of 4</span>
           <span>{Math.round(((step + 1) / 4) * 100)}% Synchronized</span>
         </div>
@@ -50,8 +50,8 @@ const Quiz: React.FC<QuizProps> = ({ onComplete }) => {
       <div className="min-h-[300px]">
         {step === 0 && (
           <div className="quiz-step-fade" key="step-0">
-            <h2 className="text-3xl font-black mb-2 text-white uppercase tracking-tight select-none">Select Categories</h2>
-            <p className="text-gray-400 mb-8 text-sm select-none">Choose the genres that define your typical library.</p>
+            <h2 className="text-3xl font-black mb-2 text-white uppercase tracking-tight">Select Categories</h2>
+            <p className="text-gray-400 mb-8 text-sm">Choose the genres that define your typical library.</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
               {GENRES.map(genre => (
                 <button
@@ -72,8 +72,8 @@ const Quiz: React.FC<QuizProps> = ({ onComplete }) => {
 
         {step === 1 && (
           <div className="quiz-step-fade" key="step-1">
-            <h2 className="text-3xl font-black mb-2 text-white uppercase tracking-tight select-none">Playstyle Profile</h2>
-            <p className="text-gray-400 mb-8 text-sm select-none">How do you prefer to interact with game mechanics?</p>
+            <h2 className="text-3xl font-black mb-2 text-white uppercase tracking-tight">Playstyle Profile</h2>
+            <p className="text-gray-400 mb-8 text-sm">How do you prefer to interact with game mechanics?</p>
             <div className="space-y-4 mb-8">
               {['casual', 'balanced', 'hardcore'].map((style) => (
                 <button
@@ -101,8 +101,8 @@ const Quiz: React.FC<QuizProps> = ({ onComplete }) => {
 
         {step === 2 && (
           <div className="quiz-step-fade" key="step-2">
-            <h2 className="text-3xl font-black mb-2 text-white uppercase tracking-tight select-none">Temporal Allocation</h2>
-            <p className="text-gray-400 mb-8 text-sm select-none">How much time can you commit to a single title?</p>
+            <h2 className="text-3xl font-black mb-2 text-white uppercase tracking-tight">Temporal Allocation</h2>
+            <p className="text-gray-400 mb-8 text-sm">How much time can you commit to a single title?</p>
             <div className="grid grid-cols-1 gap-4 mb-8">
               {[
                 { id: 'short', label: 'Bite-Sized (< 15 hrs)', desc: 'High-impact, concise experiences that respect your time.' },
@@ -128,8 +128,8 @@ const Quiz: React.FC<QuizProps> = ({ onComplete }) => {
 
         {step === 3 && (
           <div className="quiz-step-fade" key="step-3">
-            <h2 className="text-3xl font-black mb-2 text-white uppercase tracking-tight select-none">Specific Directives</h2>
-            <p className="text-gray-400 mb-8 text-sm select-none">Mention themes, settings, or specific 'vibes' (e.g., Cyberpunk, Retro, Dark).</p>
+            <h2 className="text-3xl font-black mb-2 text-white uppercase tracking-tight">Specific Directives</h2>
+            <p className="text-gray-400 mb-8 text-sm">Mention themes, settings, or specific 'vibes' (e.g., Cyberpunk, Retro, Dark).</p>
             <textarea
               className="w-full bg-black/40 border border-white/10 rounded-sm p-5 text-white focus:outline-none focus:border-blue-500 mb-8 h-40 font-medium placeholder:text-gray-700 transition-colors"
               placeholder="E.g. I want something with a deep loot system and a depressing atmosphere..."
