@@ -33,15 +33,14 @@ const GAME_SCHEMA = {
   required: ["recommendations", "accuracy"]
 };
 
-// Helper: Generate correct Steam image URL
 const getSteamImageUrl = (steamAppId: string): string => {
-  return `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${steamAppId}/header.jpg`;
+  return `https://cdn.akamai.steamstatic.com/steam/apps/${steamAppId}/header.jpg`;
 };
 
-// Helper: Fetch REAL game details from Steam API
 const fetchSteamGameDetails = async (steamAppId: string) => {
   try {
-    const response = await fetch(`https://store.steampowered.com/api/appdetails?appids=${steamAppId}&cc=us`);
+    // Call YOUR API route instead of Steam directly
+    const response = await fetch(`/api/steam?appid=${steamAppId}`);
     const data = await response.json();
     const gameData = data[steamAppId]?.data;
     
@@ -74,7 +73,6 @@ const fetchSteamGameDetails = async (steamAppId: string) => {
   }
 };
 
-// Helper: Fetch gg.deals price and URL
 const fetchGGDealsInfo = async (title: string) => {
   const ggDealsApiKey = import.meta.env.VITE_GGDEALS_API_KEY || '';
   let cheapestPrice = "Check gg.deals";
@@ -131,7 +129,6 @@ export const getGameRecommendations = async (answers: QuizAnswers): Promise<Reco
     const parsed = JSON.parse(response.text || '{}');
     const recommendations = parsed.recommendations || [];
 
-    // Enrich each game with REAL data from Steam
     for (let game of recommendations) {
       const steamDetails = await fetchSteamGameDetails(game.steamAppId);
       const ggDealsInfo = await fetchGGDealsInfo(steamDetails.title);
@@ -157,7 +154,7 @@ export const getGameRecommendations = async (answers: QuizAnswers): Promise<Reco
 
 export const searchSpecificGame = async (query: string): Promise<GameRecommendation> => {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-  if (!apiKey) throw new Error("API key missing. Set VITE_GEMINI_API_KEY in your environment variables.");
+  if (!apiKey) throw new Error("API key missing.");
 
   const ai = new GoogleGenAI({ apiKey });
 
@@ -185,7 +182,6 @@ export const searchSpecificGame = async (query: string): Promise<GameRecommendat
   
   const game = JSON.parse(response.text || '{}');
   
-  // Fetch REAL game details from Steam
   const steamDetails = await fetchSteamGameDetails(game.steamAppId);
   const ggDealsInfo = await fetchGGDealsInfo(steamDetails.title);
   
