@@ -4,6 +4,7 @@ import { QuizAnswers, RecommendationResponse } from './types.ts';
 import { getGameRecommendations, searchSpecificGame } from './services/geminiService.ts';
 import Quiz from './components/Quiz.tsx';
 import GameCard from './components/GameCard.tsx';
+import HexBackground from './components/HexBackground.tsx';
 
 const App: React.FC = () => {
   const [view, setView] = useState<'welcome' | 'quiz' | 'loading' | 'results'>('welcome');
@@ -51,6 +52,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen steam-gradient pb-20">
+      <HexBackground />
       <nav className="p-6 border-b border-white/5 mb-8 sticky top-0 bg-[#171a21]/95 backdrop-blur-xl z-50">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
           <div onClick={() => setView('welcome')} className="text-2xl font-black text-white cursor-pointer tracking-tighter flex items-center gap-2">
