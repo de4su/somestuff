@@ -1,7 +1,5 @@
-
 import React, { useMemo, useState, useEffect } from 'react';
 
-// Massive pool of Steam App IDs to ensure a huge variety
 const HEX_GAMES_POOL = [
   '1245620', '1091500', '1086940', '271590', '1174180', '489830', '377160', '570', '440', '730', 
   '252490', '346110', '292030', '1145360', '1938090', '582010', '236430', '374320', '814380', '1446780', 
@@ -20,14 +18,10 @@ const HexBackground: React.FC = () => {
   const [activeIds, setActiveIds] = useState<Set<string>>(new Set());
 
   const gridData = useMemo(() => {
-    const rows = 30; 
-    const cols = 30;
+    const rows = 20; // Optimized from 30 to 20
+    const cols = 20; // Optimized from 30 to 20
     
-    // Create a deterministic but "shuffled" 2D array of game IDs
-    // We want to avoid neighbors having the same ID.
     const getShuffledId = (r: number, c: number) => {
-        // Use a simple hash to select a game from the pool so it feels random 
-        // but prevents linear repetition patterns
         const hash = (r * 127 + c * 13) % HEX_GAMES_POOL.length;
         return HEX_GAMES_POOL[hash];
     };
@@ -48,12 +42,11 @@ const HexBackground: React.FC = () => {
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     if (!isTouchDevice) return;
 
-    // Mobile "Glance" logic - occasionally reveal games automatically
     const interval = setInterval(() => {
       const newActive = new Set<string>();
-      for (let i = 0; i < 3; i++) {
-        const randRow = Math.floor(Math.random() * 30);
-        const randCol = Math.floor(Math.random() * 30);
+      for (let i = 0; i < 2; i++) { // Reduced from 3 to 2
+        const randRow = Math.floor(Math.random() * 20);
+        const randCol = Math.floor(Math.random() * 20);
         newActive.add(`hex-${randRow}-${randCol}`);
       }
       
@@ -65,9 +58,9 @@ const HexBackground: React.FC = () => {
           newActive.forEach(id => next.delete(id));
           return next;
         });
-      }, 1500);
+      }, 1000); // Reduced from 1500
 
-    }, 2500); 
+    }, 4000); // Increased from 2500
 
     return () => clearInterval(interval);
   }, []);
@@ -92,9 +85,9 @@ const HexBackground: React.FC = () => {
                     className="hex-image"
                     alt=""
                     loading="lazy"
+                    decoding="async"
                     onError={(e) => {
-                        // Fallback if a specific Steam asset is missing
-                        (e.target as HTMLImageElement).style.opacity = '0';
+                        (e.target as HTMLImageElement).style.display = 'none';
                     }}
                   />
                 </div>
