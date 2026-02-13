@@ -11,17 +11,19 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
   const [videoFailed, setVideoFailed] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Multiple image sources for slideshow
+  // PROXIED media URLs (through Vercel API)
+  const imageBase = `/api/steam-media?media=image&appid=${game.steamAppId}`;
   const imageUrls = [
-    `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/header.jpg`,
-    `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/capsule_616x353.jpg`,
-    `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/library_600x900.jpg`,
-    `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.steamAppId}/header.jpg`,
+    `${imageBase}&variant=header`,
+    `${imageBase}&variant=capsule`,
+    `${imageBase}&variant=library`,
   ];
 
-  const videoTrailer = `https://cdn.akamai.steamstatic.com/steam/apps/${game.steamAppId}/microtrailer.webm`;
+  // Try webm via proxy; you can also try mp4 as a backup if you want
+  const videoTrailer = `/api/steam-media?media=microtrailer&appid=${game.steamAppId}`;
+
   const storeUrl = `https://store.steampowered.com/app/${game.steamAppId}`;
 
   const getScoreColor = (score: number) => {
@@ -54,7 +56,7 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
     if (isHovered && (videoFailed || !videoLoaded)) {
       intervalRef.current = setInterval(() => {
         setCurrentImageIndex((prev) => (prev + 1) % imageUrls.length);
-      }, 1500); // Change image every 1.5s
+      }, 1500);
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -77,13 +79,17 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="relative h-56 w-full overflow-hidden bg-black group-hover:shadow-[0_0_30px_rgba(102,192,244,0.3)] transition-all duration-500">
-        {/* Slideshow images */}
+        {/* Slideshow images via proxy */}
         {imageUrls.map((url, idx) => (
           <img 
             key={idx}
             src={url} 
             alt={`${game.title} ${idx}`}
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            loading="lazy"
+            onError={(e) => {
+              // If a particular variant 404s, hide that element
+              e.currentTarget.style.display = 'none';
+            }}
             className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-in-out ${
               isHovered && (videoFailed || !videoLoaded) && idx === currentImageIndex
                 ? 'scale-110 opacity-100'
@@ -95,15 +101,18 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
           />
         ))}
         
-        {/* Video layer */}
+        {/* Video layer via proxy */}
         {!videoFailed && (
           <video 
             ref={videoRef}
-            src={videoTrailer}
             muted
             loop
             playsInline
-            onError={() => setVideoFailed(true)}
+            preload="none"
+            src={videoTrailer}
+            onError={() => {
+              setVideoFailed(true);
+            }}
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
               isHovered && videoLoaded ? 'opacity-100 z-10' : 'opacity-0 z-0'
             }`}
@@ -131,7 +140,7 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
           {game.suitabilityScore}% MATCH
         </div>
 
-        {/* Loading spinner */}
+        {/* Loading spinner while video tries */}
         {isHovered && !videoLoaded && !videoFailed && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm z-10">
             <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -139,6 +148,7 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
         )}
       </div>
       
+      {/* Rest of your card unchanged */}
       <div className="p-6 flex flex-col flex-grow">
         <div className="flex justify-between items-start mb-4">
           <h3 className="text-xl font-black text-white group-hover:text-blue-400 transition-colors line-clamp-2 uppercase tracking-tight flex-1">
@@ -149,11 +159,17 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
         <div className="grid grid-cols-2 gap-px bg-white/5 border border-white/5 rounded-xl overflow-hidden mb-6">
           <div className="bg-[#1b2838]/80 p-4 flex flex-col items-center">
             <div className="text-[9px] text-blue-400/70 font-black uppercase tracking-[0.2em] mb-1">Main Quest</div>
-            <div className="text-2xl font-stats text-white leading-none">{game.mainStoryTime}<span className="text-xs text-blue-500 font-normal ml-0.5">hrs</span></div>
+            <div className="text-2xl font-stats text-white leading-none">
+              {game.mainStoryTime}
+              <span className="text-xs text-blue-500 font-normal ml-0.5">hrs</span>
+            </div>
           </div>
           <div className="bg-[#1b2838]/80 p-4 flex flex-col items-center">
             <div className="text-[9px] text-purple-400/70 font-black uppercase tracking-[0.2em] mb-1">Completionist</div>
-            <div className="text-2xl font-stats text-white leading-none">{game.completionistTime}<span className="text-xs text-purple-500 font-normal ml-0.5">hrs</span></div>
+            <div className="text-2xl font-stats text-white leading-none">
+              {game.completionistTime}
+              <span className="text-xs text-purple-500 font-normal ml-0.5">hrs</span>
+            </div>
           </div>
         </div>
 
