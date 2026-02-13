@@ -41,9 +41,9 @@ const GAME_SCHEMA = {
 };
 
 export const getGameRecommendations = async (answers: QuizAnswers): Promise<RecommendationResponse> => {
-  const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : '';
+ const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
   if (!apiKey) {
-    throw new Error("API_KEY is missing. Ensure it is set in the environment.");
+    throw new Error("API key missing. Set VITE_GEMINI_API_KEY in your environment variables.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -88,8 +88,8 @@ export const getGameRecommendations = async (answers: QuizAnswers): Promise<Reco
 };
 
 export const searchSpecificGame = async (query: string): Promise<GameRecommendation> => {
-  const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : '';
-  if (!apiKey) throw new Error("API_KEY missing.");
+ const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+  if (!apiKey) throw new Error("API key missing. Set VITE_GEMINI_API_KEY in your environment variables.");
 
   const ai = new GoogleGenAI({ apiKey });
 
