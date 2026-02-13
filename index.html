@@ -34,6 +34,7 @@
             border: 1px solid rgba(102, 192, 244, 0.1);
             backdrop-filter: blur(16px);
             transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            pointer-events: auto;
         }
         .font-stats {
             font-family: 'Space Mono', monospace;
@@ -161,22 +162,19 @@
             animation: slideUp 0.7s cubic-bezier(0.19, 1, 0.22, 1) forwards;
         }
 
-        /* Fix for main content to stay above hex grid */
         #root {
             position: relative;
             z-index: 10;
         }
 
-        /* Ensure buttons and interactive elements work */
         button, a, input, select, textarea {
             position: relative;
             z-index: 15;
         }
 
-        /* Fix for "NEXT OBSESSION" disappearing */
-        .welcome-fade-in {
+        /* Welcome page - text stays forever */
+        .welcome-container {
             animation: welcomeFadeIn 0.7s cubic-bezier(0.19, 1, 0.22, 1) forwards;
-            opacity: 1;
         }
 
         @keyframes welcomeFadeIn {
@@ -190,10 +188,18 @@
             }
         }
 
-        /* Ensure text doesn't block hex hovers */
-        .select-none {
-            user-select: none;
+        .welcome-title, .welcome-subtitle {
             pointer-events: none;
+            user-select: none;
+        }
+
+        /* Quiz wrapper - transparent to mouse except interactive elements */
+        .quiz-wrapper {
+            pointer-events: none;
+        }
+
+        .quiz-wrapper * {
+            pointer-events: auto;
         }
 
         /* Quiz animations */
