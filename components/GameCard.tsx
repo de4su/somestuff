@@ -40,7 +40,9 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
     return Array.from(new Set(list));
   }, [media.screenshots, fallbackStatic]);
 
-  const videoTrailer = media.microtrailer || '';
+  const videoTconst videoTrailer = media.microtrailer 
+  ? `/api/steam-video?url=${encodeURIComponent(media.microtrailer)}`
+  : '';railer = media.microtrailer || '';
 
   const storeUrl = `https://store.steampowered.com/app/${game.steamAppId}`;
 
