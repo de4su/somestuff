@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 
 const HEX_GAMES_POOL = [
   '1245620', '1091500', '1086940', '271590', '1174180', '489830', '377160', '570', '440', '730', 
@@ -15,11 +15,9 @@ const HEX_GAMES_POOL = [
 ];
 
 const HexBackground: React.FC = () => {
-  const [activeIds, setActiveIds] = useState<Set<string>>(new Set());
-
   const gridData = useMemo(() => {
-    const rows = 20; // Optimized from 30 to 20
-    const cols = 20; // Optimized from 30 to 20
+    const rows = 20;
+    const cols = 20;
     
     const getShuffledId = (r: number, c: number) => {
         const hash = (r * 127 + c * 13) % HEX_GAMES_POOL.length;
@@ -38,33 +36,6 @@ const HexBackground: React.FC = () => {
     );
   }, []);
 
-  useEffect(() => {
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    if (!isTouchDevice) return;
-
-    const interval = setInterval(() => {
-      const newActive = new Set<string>();
-      for (let i = 0; i < 2; i++) { // Reduced from 3 to 2
-        const randRow = Math.floor(Math.random() * 20);
-        const randCol = Math.floor(Math.random() * 20);
-        newActive.add(`hex-${randRow}-${randCol}`);
-      }
-      
-      setActiveIds(prev => new Set([...prev, ...newActive]));
-
-      setTimeout(() => {
-        setActiveIds(prev => {
-          const next = new Set(prev);
-          newActive.forEach(id => next.delete(id));
-          return next;
-        });
-      }, 1000); // Reduced from 1500
-
-    }, 4000); // Increased from 2500
-
-    return () => clearInterval(interval);
-  }, []);
-
   return (
     <div className="hex-wrapper">
       <div className="hex-grid">
@@ -73,7 +44,7 @@ const HexBackground: React.FC = () => {
             {row.map((cell) => (
               <div 
                 key={cell.id} 
-                className={`hex ${activeIds.has(cell.id) ? 'active' : ''}`}
+                className="hex"
                 style={{ 
                   opacity: cell.initialOpacity,
                   '--delay': cell.delay
