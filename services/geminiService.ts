@@ -39,8 +39,8 @@ const getSteamImageUrl = (steamAppId: string): string => {
 
 const fetchSteamGameDetails = async (steamAppId: string) => {
   try {
-    // Call YOUR API route instead of Steam directly
-    const response = await fetch(`/api/steam?appid=${steamAppId}`);
+    // Use CORS proxy
+    const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(`https://store.steampowered.com/api/appdetails?appids=${steamAppId}&cc=us`)}`);
     const data = await response.json();
     const gameData = data[steamAppId]?.data;
     
@@ -75,7 +75,7 @@ const fetchSteamGameDetails = async (steamAppId: string) => {
 
 const fetchGGDealsInfo = async (title: string) => {
   const ggDealsApiKey = import.meta.env.VITE_GGDEALS_API_KEY || '';
-  let cheapestPrice = "Check gg.deals";
+  let cheapestPrice = "View Deals";
   let dealUrl = `https://gg.deals/game/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}/`;
 
   if (ggDealsApiKey) {
@@ -103,18 +103,14 @@ export const getGameRecommendations = async (answers: QuizAnswers): Promise<Reco
 
   const ai = new GoogleGenAI({ apiKey });
 
-  const prompt = `Act as an expert Steam data analyst. Suggest 6 video games available on Steam.
+  const prompt = `Act as an expert Steam game curator. Suggest 6 video games available on Steam.
     User Preferences:
     - Genres: ${answers.preferredGenres.join(', ')}
     - Style: ${answers.playstyle}
     - Availability: ${answers.timeAvailability}
     - Keywords: ${answers.specificKeywords}
     
-    CRITICAL INSTRUCTIONS:
-    1. Identify exact Steam App IDs only.
-    2. Use HowLongToBeat values for Main Story and Completionist times.
-    3. SUITABILITY: Score 0-100 based on how well the game matches user preferences.
-    4. Explain why you picked each game in reasonForPick.`;
+    CRITICAL: Provide EXACT Steam App IDs, accurate HowLongToBeat times, and score 0-100 based on preference match.`;
 
   try {
     const response = await ai.models.generateContent({
@@ -158,7 +154,7 @@ export const searchSpecificGame = async (query: string): Promise<GameRecommendat
 
   const ai = new GoogleGenAI({ apiKey });
 
-  const prompt = `Search for the specific video game "${query}". Retrieve ONLY its numeric Steam App ID and playtimes (main story/completionist).`;
+  const prompt = `Find the video game "${query}". Provide its exact Steam App ID and HowLongToBeat playtimes.`;
   
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-lite",
