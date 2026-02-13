@@ -58,7 +58,7 @@
             z-index: 0;
             overflow: hidden;
             background: radial-gradient(circle at center, var(--steam-navy) 0%, var(--steam-dark) 100%);
-            pointer-events: none;
+            pointer-events: none; /* JS will track through this */
         }
         
         @keyframes scrollBackgroundRoaming {
@@ -104,14 +104,16 @@
             transition: transform 0.4s ease, opacity 0.4s ease;
             position: relative;
             flex-shrink: 0;
-            pointer-events: auto;
+            pointer-events: auto; /* individual hexes can be found by JS */
             will-change: transform, opacity;
             animation: neonPulse 4s infinite ease-in-out;
             animation-delay: calc(var(--delay, 0) * 1s);
             contain: layout style paint;
         }
 
-        .hex:hover {
+        /* Hover + JS-forced hover styles */
+        .hex:hover,
+        .hex.is-hovered {
             background: #fff; 
             transform: scale(1.25) rotate(2deg) translateZ(0);
             z-index: 50;
@@ -141,7 +143,9 @@
             will-change: transform, opacity;
         }
 
-        .hex:hover .hex-image {
+        /* Reveal image on hover OR JS-forced hover */
+        .hex:hover .hex-image,
+        .hex.is-hovered .hex-image {
             opacity: 1;
             transform: scale(1) translateZ(0);
         }
@@ -243,7 +247,7 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
+<!-- REMOVED broken /index.css link -->
 </head>
 <body>
     <div id="root"></div>
