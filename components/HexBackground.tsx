@@ -14,7 +14,7 @@ const STEAM_APP_IDS = [
   '292030',  // The Witcher 3
   '1203220', // NARAKA: BLADEPOINT
   '582010',  // Monster Hunter: World
-  '1716740', // Titanfall 2
+  '236390',  // War Thunder
   '489830',  // The Elder Scrolls V: Skyrim Special Edition
   '1172470', // Apex Legends
   '413150',  // Stardew Valley
@@ -24,7 +24,7 @@ const STEAM_APP_IDS = [
   '945360',  // Among Us
   '252490',  // Rust
   '440',     // Team Fortress 2
-  '359550',  // Tom Clancy's Rainbow Six Siege
+  '1938090', // Call of Duty
   '578080',  // PUBG: BATTLEGROUNDS
   '1172380', // Star Wars Jedi: Fallen Order
   '1085660', // Destiny 2
