@@ -75,12 +75,12 @@ const App: React.FC = () => {
 
         <main className="flex-grow max-w-7xl mx-auto px-6 py-12 w-full flex flex-col items-center justify-center">
           {view === 'welcome' && (
-            <div className="text-center py-20 welcome-fade-in">
-              <h1 className="text-6xl md:text-8xl font-black text-white mb-6 tracking-tighter leading-none drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] select-none">
+            <div className="text-center py-20 welcome-container">
+              <h1 className="text-6xl md:text-8xl font-black text-white mb-6 tracking-tighter leading-none drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] welcome-title">
                 DISCOVER YOUR<br/>
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">NEXT OBSESSION</span>
               </h1>
-              <p className="text-gray-300 mb-12 max-w-xl mx-auto text-lg font-medium bg-black/40 backdrop-blur-sm p-4 rounded-2xl border border-white/5 select-none">
+              <p className="text-gray-300 mb-12 max-w-xl mx-auto text-lg font-medium bg-black/40 backdrop-blur-sm p-4 rounded-2xl border border-white/5 welcome-subtitle">
                 Our AI analyzes thousands of Steam titles to find games that match your specific playstyle and time constraints.
               </p>
               <button 
@@ -90,7 +90,7 @@ const App: React.FC = () => {
                 START THE QUIZ
               </button>
               {error && (
-                <div className="mt-12 p-4 bg-red-950/40 border border-red-500/30 text-red-200 font-mono text-sm rounded-lg max-w-md mx-auto backdrop-blur-md select-none">
+                <div className="mt-12 p-4 bg-red-950/40 border border-red-500/30 text-red-200 font-mono text-sm rounded-lg max-w-md mx-auto backdrop-blur-md">
                   {error}
                 </div>
               )}
@@ -98,7 +98,7 @@ const App: React.FC = () => {
           )}
 
           {view === 'loading' && (
-            <div className="py-40 text-center flex flex-col items-center animate-pulse select-none">
+            <div className="py-40 text-center flex flex-col items-center animate-pulse">
               <div className="w-20 h-20 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-8 shadow-[0_0_30px_rgba(37,99,235,0.3)]"></div>
               <h3 className="text-2xl font-black text-white tracking-widest uppercase">Querying Steam Database...</h3>
               <p className="text-gray-500 mt-2">Determining playtimes and compatibility scores</p>
@@ -108,13 +108,13 @@ const App: React.FC = () => {
           {view === 'results' && results && (
             <div className="animate-results w-full">
               <div className="mb-10 p-10 steam-card border-l-8 border-l-blue-600 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-8 shadow-2xl">
-                <div className="text-center md:text-left select-none">
+                <div className="text-center md:text-left">
                   <h2 className="text-3xl font-black text-white mb-2 uppercase tracking-tight">Curation Complete</h2>
                   <p className="text-gray-400 text-lg max-w-2xl font-medium leading-relaxed italic">
                     "{results.accuracy?.reasoning}"
                   </p>
                 </div>
-                <div className="flex flex-col items-center bg-blue-600/10 p-6 rounded-2xl border border-blue-500/20 select-none">
+                <div className="flex flex-col items-center bg-blue-600/10 p-6 rounded-2xl border border-blue-500/20">
                   <span className="text-6xl font-stats text-blue-500 drop-shadow-[0_0_10px_rgba(102,192,244,0.3)]">{results.accuracy?.percentage || 0}%</span>
                   <span className="text-[10px] font-black text-blue-500 tracking-widest mt-1">MATCH STRENGTH</span>
                 </div>
@@ -138,7 +138,7 @@ const App: React.FC = () => {
           )}
 
           {view === 'quiz' && (
-            <div className="w-full">
+            <div className="w-full quiz-wrapper">
               <Quiz onComplete={handleQuizComplete} />
             </div>
           )}
