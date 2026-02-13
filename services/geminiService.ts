@@ -108,27 +108,33 @@ const fetchSteamGameDetails = async (steamAppId: string) => {
   return null;
 };
 
-const fetchGGDealsInfo = async (title: string) => {
+const fetchGGDealsInfo = async (steamAppId: string, title: string) => {
   const ggDealsApiKey = import.meta.env.VITE_GGDEALS_API_KEY || '';
   
+  // Fallback with slug generation
   let cheapestPrice = "View Deals";
   let dealUrl = `https://gg.deals/game/${createGGDealsSlug(title)}/`;
 
   if (ggDealsApiKey) {
     try {
-      const ggResponse = await fetch(`https://api.gg.deals/v1/games?key=${ggDealsApiKey}&title=${encodeURIComponent(title)}`);
+      // Search by Steam App ID (much more reliable!)
+      const ggResponse = await fetch(`https://api.gg.deals/v1/games?key=${ggDealsApiKey}&steamAppId=${steamAppId}`);
       const ggData = await ggResponse.json();
       
       if (ggData.data && ggData.data.length > 0) {
         const gameData = ggData.data[0];
         
+        // Get the correct gg.deals URL
         if (gameData.url) {
           dealUrl = `https://gg.deals${gameData.url}`;
         }
         
+        // Get cheapest price
         if (gameData.price?.amount) {
           cheapestPrice = `$${gameData.price.amount}`;
         }
+        
+        console.log(`✅ Found gg.deals data for App ID ${steamAppId}: ${dealUrl}`);
       }
     } catch (ggError) {
       console.warn("gg.deals API error:", ggError);
@@ -181,7 +187,7 @@ export const getGameRecommendations = async (answers: QuizAnswers): Promise<Reco
         continue;
       }
       
-      const ggDealsInfo = await fetchGGDealsInfo(steamDetails.title);
+      const ggDealsInfo = await fetchGGDealsInfo(game.steamAppId, steamDetails.title);
       
       game.title = steamDetails.title;
       game.description = steamDetails.description;
@@ -240,7 +246,7 @@ export const searchSpecificGame = async (query: string): Promise<GameRecommendat
     throw new Error(`Could not find game data for: ${query}`);
   }
   
-  const ggDealsInfo = await fetchGGDealsInfo(steamDetails.title);
+  const ggDealsInfo = await fetchGGDealsInfo(game.steamAppId, steamDetails.title);
   
   game.title = steamDetails.title;
   game.description = steamDetails.description;
