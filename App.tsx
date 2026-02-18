@@ -80,7 +80,7 @@ const App: React.FC = () => {
             <div className="text-center py-20 welcome-container pointer-events-auto">
               <h1 className="text-6xl md:text-8xl font-black text-white mb-6 tracking-tighter leading-none drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] select-none pointer-events-none">
                 DISCOVER YOUR<br/>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">NEXT OBSESSION</span>
+                NEXT OBSESSION
               </h1>
               <p className="text-gray-300 mb-12 max-w-xl mx-auto text-lg font-medium bg-black/40 backdrop-blur-sm p-4 rounded-2xl border border-white/5 select-none pointer-events-none">
                 Our AI analyzes thousands of Steam titles to find games that match your specific playstyle and time constraints.

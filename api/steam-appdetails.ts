@@ -28,19 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const data = entry.data;
 
-    const movies = Array.isArray(data.movies) ? data.movies : [];
     const screenshots = Array.isArray(data.screenshots) ? data.screenshots : [];
-
-    // Pick a microtrailer-style video if available
-    let microtrailer: string | null = null;
-    if (movies.length > 0) {
-      const m = movies[0];
-      if (m.webm && (m.webm.max || m.webm['480'])) {
-        microtrailer = m.webm.max || m.webm['480'];
-      } else if (m.mp4 && (m.mp4.max || m.mp4['480'])) {
-        microtrailer = m.mp4.max || m.mp4['480'];
-      }
-    }
 
     // Collect distinct screenshot URLs (full paths), de-duplicated
     const screenshotUrls = Array.from(
@@ -52,7 +40,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ).slice(0, 8); // limit to first 8
 
     res.status(200).json({
-      microtrailer,
       screenshots: screenshotUrls,
     });
   } catch (err) {
