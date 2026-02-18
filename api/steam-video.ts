@@ -48,14 +48,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(upstream.status);
 
     if (upstream.body) {
-      // @ts-ignore - Vercel Response accepts a stream
       const reader = upstream.body.getReader();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        res.write(value);
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          // Vercel Response.write() accepts Buffer/Uint8Array for streaming
+          res.write(value);
+        }
+        res.end();
+      } catch (streamErr) {
+        console.error('Error streaming video:', streamErr);
+        reader.releaseLock();
+        res.end();
       }
-      res.end();
     } else {
       res.end();
     }
