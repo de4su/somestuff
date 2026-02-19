@@ -6,7 +6,6 @@ interface GameCardProps {
 }
 
 interface SteamMedia {
-  microtrailer: string | null;
   screenshots: string[];
 }
 
@@ -14,7 +13,6 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
   const [isHovered, setIsHovered] = useState(false);
 
   const [media, setMedia] = useState<SteamMedia>({
-    microtrailer: null,
     screenshots: [],
   });
 
@@ -22,11 +20,7 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
   const [mediaError, setMediaError] = useState(false);
   const [mediaRequested, setMediaRequested] = useState(false);
 
-  const [videoLoaded, setVideoLoaded] = useState(false);
-  const [videoFailed, setVideoFailed] = useState(false);
-
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Fallback static image if we never get screenshots
@@ -39,11 +33,6 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
     // De-duplicate in case Steam returns same path multiple times
     return Array.from(new Set(list));
   }, [media.screenshots, fallbackStatic]);
-
-  const videoTrailer = media.microtrailer
-  ? `/api/steam-video?url=${encodeURIComponent(media.microtrailer)}`
-  : '';
-
 
   const storeUrl = `https://store.steampowered.com/app/${game.steamAppId}`;
 
@@ -67,7 +56,6 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
       })
       .then((data: SteamMedia) => {
         setMedia({
-          microtrailer: data.microtrailer,
           screenshots: data.screenshots || [],
         });
         setMediaLoaded(true);
@@ -78,31 +66,9 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
       });
   }, [isHovered, mediaRequested, mediaLoaded, mediaError, game.steamAppId]);
 
-  // 2) Try to play video when hovered and we have a microtrailer
+  // 2) Slideshow when hovered
   useEffect(() => {
-    if (isHovered && media.microtrailer && !videoFailed && videoRef.current) {
-      const playPromise = videoRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => setVideoLoaded(true))
-          .catch(() => {
-            setVideoFailed(true);
-            setVideoLoaded(false);
-          });
-      }
-    } else if (!isHovered && videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0;
-      setVideoLoaded(false);
-    }
-  }, [isHovered, media.microtrailer, videoFailed]);
-
-  // 3) Slideshow when no video or video failed
-  useEffect(() => {
-    const shouldRunSlideshow =
-      isHovered && (!media.microtrailer || videoFailed || !videoLoaded);
-
-    if (shouldRunSlideshow && imageUrls.length > 1) {
+    if (isHovered && imageUrls.length > 1) {
       intervalRef.current = setInterval(() => {
         setCurrentImageIndex((prev) => (prev + 1) % imageUrls.length);
       }, 1500);
@@ -119,7 +85,7 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isHovered, media.microtrailer, videoFailed, videoLoaded, imageUrls.length]);
+  }, [isHovered, imageUrls.length]);
 
   return (
     <div
@@ -140,9 +106,7 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
               e.currentTarget.style.display = 'none';
             }}
             className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-in-out ${
-              isHovered &&
-              (!media.microtrailer || videoFailed || !videoLoaded) &&
-              idx === currentImageIndex
+              isHovered && idx === currentImageIndex
                 ? 'scale-110 opacity-100'
                 : !isHovered && idx === 0
                 ? 'scale-100 opacity-100'
@@ -152,34 +116,8 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
           />
         ))}
 
-        {/* Microtrailer video if available */}
-        {media.microtrailer && !videoFailed && (
-          <video
-            ref={videoRef}
-            src={videoTrailer}
-            muted
-            loop
-            playsInline
-            preload="none"
-            onError={() => {
-              setVideoFailed(true);
-            }}
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
-              isHovered && videoLoaded ? 'opacity-100 z-10' : 'opacity-0 z-0'
-            }`}
-          />
-        )}
-
-        {/* Live preview badge */}
-        {isHovered && videoLoaded && (
-          <div className="absolute top-4 right-4 flex items-center gap-2 px-2 py-1 bg-black/60 backdrop-blur-md border border-red-500/50 rounded text-[10px] font-black text-white z-20">
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse-red"></span>
-            LIVE PREVIEW
-          </div>
-        )}
-
         {/* Gallery badge when using screenshots */}
-        {isHovered && (!media.microtrailer || videoFailed || !videoLoaded) && imageUrls.length > 1 && (
+        {isHovered && imageUrls.length > 1 && (
           <div className="absolute top-4 right-4 flex items-center gap-2 px-2 py-1 bg-black/60 backdrop-blur-md border border-blue-500/50 rounded text-[10px] font-black text-white z-20">
             <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
             GALLERY
@@ -195,12 +133,6 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
           {game.suitabilityScore}% MATCH
         </div>
 
-        {/* Spinner while we’re trying to play video (first hover) */}
-        {isHovered && media.microtrailer && !videoLoaded && !videoFailed && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm z-10">
-            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        )}
       </div>
 
       {/* --- rest of your card unchanged --- */}
