@@ -9,9 +9,16 @@ export interface RawgGame {
   ratings_count: number;
   metacritic: number | null;
   genres: Array<{ id: number; name: string }>;
+  parent_platforms?: Array<{ platform: { id: number; name: string; slug: string } }>;
+  platforms?: Array<{ platform: { id: number; name: string; slug: string } }>;
   developers?: Array<{ id: number; name: string; slug: string }>;
   publishers?: Array<{ id: number; name: string; slug: string }>;
   description_raw?: string;
+}
+
+export interface RawgScreenshot {
+  id: number;
+  image: string;
 }
 
 export interface RawgDeveloper {

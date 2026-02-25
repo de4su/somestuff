@@ -3,6 +3,7 @@ import {
   RawgDeveloper,
   RawgPublisher,
   RawgListResponse,
+  RawgScreenshot,
 } from '../types';
 
 const BASE_URL = 'https://api.rawg.io/api';
@@ -106,6 +107,14 @@ export async function getGamesByPublisher(
     page,
     page_size: pageSize,
   });
+}
+
+export async function getGameScreenshots(gameId: number): Promise<RawgScreenshot[]> {
+  const data = await rawgFetch<RawgListResponse<RawgScreenshot>>(
+    `/games/${gameId}/screenshots`,
+    {},
+  );
+  return data.results;
 }
 
 // ── Typeahead helper (debounced internally via AbortController) ───────────────
