@@ -1,15 +1,33 @@
-import React, { useState } from 'react';
-import { QuizAnswers, RecommendationResponse } from './types';
-import { getGameRecommendations, searchSpecificGame } from './services/geminiService';
+import React, { useState, useCallback } from 'react';
+import { QuizAnswers, RecommendationResponse, RawgGame, Suggestion } from './types';
+import { getGameRecommendations } from './services/geminiService';
+import {
+  searchGames,
+  getGamesByDeveloper,
+  getGamesByPublisher,
+} from './services/rawgService';
 import Quiz from './components/Quiz';
 import GameCard from './components/GameCard';
 import HexBackground from './components/HexBackground';
+import SearchAutocomplete from './components/SearchAutocomplete';
+import RawgGameCard from './components/RawgGameCard';
+
+type AppView = 'welcome' | 'quiz' | 'loading' | 'results' | 'rawg';
+type RawgMode = 'search' | 'developer' | 'publisher';
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'welcome' | 'quiz' | 'loading' | 'results'>('welcome');
+  const [view, setView] = useState<AppView>('welcome');
   const [results, setResults] = useState<RecommendationResponse | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // RAWG results state
+  const [rawgGames, setRawgGames] = useState<RawgGame[]>([]);
+  const [rawgMode, setRawgMode] = useState<RawgMode>('search');
+  const [rawgLabel, setRawgLabel] = useState('');
+  const [rawgPage, setRawgPage] = useState(1);
+  const [rawgTotal, setRawgTotal] = useState(0);
+  const [rawgEntityId, setRawgEntityId] = useState<number | null>(null);
+  const [rawgLoadingMore, setRawgLoadingMore] = useState(false);
 
   const handleQuizComplete = async (answers: QuizAnswers) => {
     setView('loading');
@@ -25,26 +43,62 @@ const App: React.FC = () => {
     }
   };
 
-  const handleManualSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
+  // RAWG suggestion handler
+  const handleSuggestionSelect = useCallback(async (suggestion: Suggestion) => {
     setView('loading');
     setError(null);
     try {
-      const game = await searchSpecificGame(searchQuery);
-      setResults({
-        recommendations: [game],
-        accuracy: { percentage: 100, reasoning: 'Direct search match.' }
-      });
-      setView('results');
+      let res;
+      if (suggestion.kind === 'game') {
+        res = await searchGames(suggestion.name, 1, 20);
+        setRawgMode('search');
+        setRawgLabel(`Search: ${suggestion.name}`);
+        setRawgEntityId(null);
+      } else if (suggestion.kind === 'developer') {
+        res = await getGamesByDeveloper(suggestion.id, 1, 20);
+        setRawgMode('developer');
+        setRawgLabel(`Developer: ${suggestion.name}`);
+        setRawgEntityId(suggestion.id);
+      } else {
+        res = await getGamesByPublisher(suggestion.id, 1, 20);
+        setRawgMode('publisher');
+        setRawgLabel(`Publisher: ${suggestion.name}`);
+        setRawgEntityId(suggestion.id);
+      }
+      setRawgGames(res.results);
+      setRawgTotal(res.count);
+      setRawgPage(1);
+      setView('rawg');
     } catch (err) {
       console.error(err);
-      setError('Target game not found in known sectors.');
+      setError('Search failed. Please try again.');
       setView('welcome');
-    } finally {
-      setSearchQuery('');
     }
-  };
+  }, []);
+
+  const handleLoadMore = useCallback(async () => {
+    const nextPage = rawgPage + 1;
+    setRawgLoadingMore(true);
+    try {
+      let res;
+      if (rawgMode === 'search') {
+        const query = rawgLabel.replace(/^Search: /, '');
+        res = await searchGames(query, nextPage, 20);
+      } else if (rawgMode === 'developer' && rawgEntityId !== null) {
+        res = await getGamesByDeveloper(rawgEntityId, nextPage, 20);
+      } else if (rawgMode === 'publisher' && rawgEntityId !== null) {
+        res = await getGamesByPublisher(rawgEntityId, nextPage, 20);
+      } else {
+        return;
+      }
+      setRawgGames((prev) => [...prev, ...res.results]);
+      setRawgPage(nextPage);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRawgLoadingMore(false);
+    }
+  }, [rawgPage, rawgMode, rawgLabel, rawgEntityId]);
 
   return (
     <div className="min-h-screen relative overflow-x-hidden">
@@ -63,15 +117,7 @@ const App: React.FC = () => {
               <span className="bg-blue-600 px-2 py-0.5 rounded-sm group-hover:bg-blue-500 transition-colors">STEAM</span>
               <span className="text-blue-400 group-hover:text-white transition-colors">QUEST</span>
             </div>
-            <form onSubmit={handleManualSearch} className="relative w-full md:w-96">
-              <input 
-                type="text"
-                placeholder="Direct search..."
-                className="w-full bg-black/60 border border-white/10 rounded-full px-6 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-all placeholder:text-gray-600 shadow-2xl"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </form>
+            <SearchAutocomplete onSelect={handleSuggestionSelect} />
           </div>
         </nav>
 
@@ -136,6 +182,48 @@ const App: React.FC = () => {
                   &larr; Refine Parameters
                 </button>
               </div>
+            </div>
+          )}
+
+          {view === 'rawg' && (
+            <div className="animate-results w-full pointer-events-auto">
+              <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                  <h2 className="text-2xl font-black text-white uppercase tracking-tight">{rawgLabel}</h2>
+                  <p className="text-gray-500 text-sm mt-1">{rawgTotal.toLocaleString()} results found</p>
+                </div>
+                <button
+                  onClick={() => setView('welcome')}
+                  className="px-6 py-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-full transition-all text-xs font-black tracking-widest uppercase border border-white/5 backdrop-blur-xl shrink-0"
+                >
+                  &larr; Back
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {rawgGames.map((game) => (
+                  <RawgGameCard key={game.id} game={game} />
+                ))}
+              </div>
+
+              {rawgGames.length < rawgTotal && (
+                <div className="mt-12 text-center">
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={rawgLoadingMore}
+                    className="px-10 py-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-full font-black text-sm uppercase tracking-widest transition-all shadow-[0_0_30px_rgba(37,99,235,0.3)]"
+                  >
+                    {rawgLoadingMore ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                        Loading…
+                      </span>
+                    ) : (
+                      `Load More (${rawgGames.length} / ${rawgTotal})`
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
