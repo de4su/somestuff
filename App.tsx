@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { QuizAnswers, RecommendationResponse, RawgGame, Suggestion } from './types';
-import { getGameRecommendations } from './services/geminiService';
+import { getGameRecommendations, searchSpecificGame } from './services/geminiService';
 import {
   searchGames,
   getGamesByDeveloper,
@@ -99,6 +99,26 @@ const App: React.FC = () => {
       setRawgLoadingMore(false);
     }
   }, [rawgPage, rawgMode, rawgLabel, rawgEntityId]);
+
+  const handleRawgGameClick = useCallback(async (rawgGame: RawgGame) => {
+    setView('loading');
+    setError(null);
+    try {
+      const enriched = await searchSpecificGame(rawgGame.name);
+      setResults({
+        recommendations: [enriched],
+        accuracy: {
+          percentage: enriched.suitabilityScore ?? 100,
+          reasoning: `Enriched result for "${rawgGame.name}" selected from RAWG search.`,
+        },
+      });
+      setView('results');
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Failed to enrich game. Please try again.');
+      setView('rawg');
+    }
+  }, []);
 
   return (
     <div className="min-h-screen relative overflow-x-hidden">
@@ -202,7 +222,7 @@ const App: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {rawgGames.map((game) => (
-                  <RawgGameCard key={game.id} game={game} />
+                  <RawgGameCard key={game.id} game={game} onClick={handleRawgGameClick} />
                 ))}
               </div>
 
