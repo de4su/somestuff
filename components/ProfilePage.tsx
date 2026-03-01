@@ -1,3 +1,8 @@
+/*
+ * ProfilePage — Displays a logged-in user's quiz history fetched from Supabase.
+ * Results are ordered newest-first and rendered as an accordion so the page stays
+ * scannable; clicking a row expands the full game list for that session.
+ */
 import React, { useEffect, useState } from 'react';
 import { SteamUser, QuizResultRecord } from '../types';
 import { supabase } from '../services/supabaseClient';

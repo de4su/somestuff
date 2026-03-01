@@ -1,3 +1,16 @@
+/*
+ * geminiService — Game recommendation engine powered by Google Gemini.
+ *
+ * Flow for getGameRecommendations:
+ *   1. Check Supabase for a cached result matching (steamId, answersHash) to avoid
+ *      redundant Gemini calls for identical quiz submissions.
+ *   2. Ask Gemini for 6 Steam game IDs + metadata (structured JSON via schema).
+ *   3. Enrich each result: fetch real title/description/price from the Steam Store API
+ *      using a chain of CORS proxies as fallbacks (browser cannot call Steam directly).
+ *   4. Optionally enrich with the cheapest deal URL from gg.deals.
+ *   5. Persist the final result to Supabase so future identical quizzes are served
+ *      from cache.
+ */
 import { GoogleGenAI, Type } from "@google/genai";
 import { QuizAnswers, RecommendationResponse, GameRecommendation } from "../types";
 import { supabase } from "./supabaseClient";
@@ -46,7 +59,8 @@ const GAME_SCHEMA = {
   required: ["recommendations", "accuracy"]
 };
 
-// Multiple CORS proxies as fallbacks
+// Steam's Store API is not accessible directly from the browser due to CORS restrictions.
+// We try a list of public CORS proxies in order, falling back to a direct request last.
 const CORS_PROXIES = [
   (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
   (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
@@ -73,8 +87,7 @@ const fetchSteamGameDetails = async (steamAppId: string) => {
   for (let i = 0; i < CORS_PROXIES.length; i++) {
     try {
       const proxyUrl = CORS_PROXIES[i](steamUrl);
-      console.log(`Attempting Steam fetch for ${steamAppId} using proxy ${i + 1}/${CORS_PROXIES.length}`);
-      
+
       const response = await fetch(proxyUrl, {
         signal: AbortSignal.timeout(10000)
       });
@@ -94,9 +107,7 @@ const fetchSteamGameDetails = async (steamAppId: string) => {
 
       const priceData = gameData.price_overview;
       const steamPrice = priceData ? `$${(priceData.final / 100).toFixed(2)}` : "Free";
-      
-      console.log(`✅ Successfully fetched ${gameData.name} using proxy ${i + 1}`);
-      
+
       return {
         title: gameData.name || "Unknown Game",
         description: gameData.short_description || gameData.detailed_description || "No description available",
@@ -135,12 +146,10 @@ const fetchGGDealsInfo = async (steamAppId: string, title: string) => {
         if (gameData.url) {
           dealUrl = `https://gg.deals${gameData.url}`;
         }
-        
+
         if (gameData.price?.amount) {
           cheapestPrice = `$${gameData.price.amount}`;
         }
-        
-        console.log(`✅ Found gg.deals data for App ID ${steamAppId}: ${dealUrl}`);
       }
     } catch (ggError) {
       console.warn("gg.deals API error:", ggError);
@@ -156,7 +165,8 @@ export const getGameRecommendations = async (answers: QuizAnswers, steamId?: str
     throw new Error("API key missing. Set VITE_GEMINI_API_KEY in your environment variables.");
   }
 
-  // ── Supabase cache lookup ────────────────────────────────────────────────
+  // Check Supabase for a cached result before calling Gemini.
+  // The hash is deterministic so identical quiz inputs always map to the same cache key.
   const answersHash = hashAnswers(answers);
   if (steamId) {
     try {
@@ -167,7 +177,6 @@ export const getGameRecommendations = async (answers: QuizAnswers, steamId?: str
         .eq('answers_hash', answersHash)
         .maybeSingle();
       if (cached?.results) {
-        console.log('✅ Returning cached quiz result from Supabase');
         return cached.results as RecommendationResponse;
       }
     } catch (cacheErr) {
@@ -212,7 +221,8 @@ export const getGameRecommendations = async (answers: QuizAnswers, steamId?: str
     const enrichedGames = [];
     for (let i = 0; i < recommendations.length; i++) {
       const game = recommendations[i];
-      
+
+      // Brief delay between enrichment requests to stay within Steam API rate limits.
       if (i > 0) await delay(300);
       
       const steamDetails = await fetchSteamGameDetails(game.steamAppId);
@@ -231,8 +241,7 @@ export const getGameRecommendations = async (answers: QuizAnswers, steamId?: str
       game.steamPrice = steamDetails.steamPrice;
       game.cheapestPrice = ggDealsInfo.cheapestPrice;
       game.dealUrl = ggDealsInfo.dealUrl;
-      // Keep playtimes from Gemini (they're now in the schema)
-      
+
       enrichedGames.push(game);
     }
 
@@ -241,7 +250,7 @@ export const getGameRecommendations = async (answers: QuizAnswers, steamId?: str
       accuracy: parsed.accuracy || { percentage: 0, reasoning: "Evaluation failed." }
     };
 
-    // ── Supabase cache write ────────────────────────────────────────────────
+    // Persist the result so future identical quiz submissions skip Gemini entirely.
     if (steamId) {
       try {
         await supabase.from('quiz_results').upsert({
@@ -307,7 +316,6 @@ export const searchSpecificGame = async (query: string): Promise<GameRecommendat
   game.steamPrice = steamDetails.steamPrice;
   game.cheapestPrice = ggDealsInfo.cheapestPrice;
   game.dealUrl = ggDealsInfo.dealUrl;
-  // Keep playtimes from Gemini
-  
+
   return game;
 };

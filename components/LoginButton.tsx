@@ -7,6 +7,8 @@ interface LoginButtonProps {
   onLogout: () => void;
 }
 
+/* Renders either a profile chip + sign-out button (authenticated) or a Steam login link
+   (unauthenticated). The Steam-branded colour scheme follows Steam's sign-in button guidelines. */
 const LoginButton: React.FC<LoginButtonProps> = ({ user, onProfileClick, onLogout }) => {
   if (user) {
     return (

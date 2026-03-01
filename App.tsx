@@ -32,16 +32,17 @@ const App: React.FC = () => {
   const [rawgEntityId, setRawgEntityId] = useState<number | null>(null);
   const [rawgLoadingMore, setRawgLoadingMore] = useState(false);
 
-  // ── Steam auth ───────────────────────────────────────────────────────────
+  // Check for an existing Steam session on mount and clean up the OAuth redirect parameter.
+  // Steam OpenID redirects back with ?loggedIn=1 after a successful login; we strip it
+  // so the URL stays clean without affecting browser history or navigation state.
   useEffect(() => {
     fetch('/api/auth/me')
       .then((r) => r.json())
       .then((user: SteamUser | null) => {
         if (user?.steamId) setSteamUser(user);
       })
-      .catch(() => {/* not critical */});
+      .catch(() => {});
 
-    // Clear ?loggedIn=1 from URL after redirect-back from Steam
     const url = new URL(window.location.href);
     if (url.searchParams.has('loggedIn')) {
       url.searchParams.delete('loggedIn');
@@ -151,10 +152,9 @@ const App: React.FC = () => {
     <div className="min-h-screen relative overflow-x-hidden">
       <HexBackground />
 
-      {/* CRITICAL FIX: Add pointer-events-none here */}
+      {/* pointer-events-none on this wrapper lets the hex background receive mouse events;
+          each interactive section restores pointer events with pointer-events-auto */}
       <div className="relative z-10 min-h-screen flex flex-col pointer-events-none">
-        
-        {/* Nav needs pointer-events-auto */}
         <nav className="p-6 border-b border-white/5 sticky top-0 bg-[#171a21]/70 backdrop-blur-2xl z-50 pointer-events-auto">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
             <div 

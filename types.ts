@@ -1,4 +1,4 @@
-// ── Auth types ───────────────────────────────────────────────────────────────
+// Auth types
 
 export interface SteamUser {
   steamId: string;
@@ -6,7 +6,7 @@ export interface SteamUser {
   avatarUrl: string;
 }
 
-// ── RAWG API types ──────────────────────────────────────────────────────────
+// RAWG API types
 
 export interface RawgGame {
   id: number;
@@ -62,7 +62,7 @@ export interface Suggestion {
   extra?: string; // e.g. genre list for games, games_count for devs/pubs
 }
 
-// ── Existing types ───────────────────────────────────────────────────────────
+// Game recommendation types
 
 export interface GameRecommendation {
   id: string;
@@ -101,8 +101,11 @@ export interface RecommendationResponse {
   accuracy: QuizAccuracy;
 }
 
-// ── Quiz history (Supabase) ──────────────────────────────────────────────────
+// Quiz history — persisted in Supabase keyed by (steam_id, answers_hash) so identical
+// quiz submissions are deduplicated and served from cache rather than re-querying Gemini.
 
+/* QuizResultRecord mirrors the quiz_results table schema in Supabase. answers_hash is a
+   base64-encoded, sorted representation of QuizAnswers used for cache lookups. */
 export interface QuizResultRecord {
   id: string;
   steam_id: string;

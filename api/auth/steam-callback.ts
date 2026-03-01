@@ -1,7 +1,19 @@
+/*
+ * /api/auth/steam-callback — Steam OpenID callback handler.
+ * Steam redirects here after the user approves login. This handler performs two steps:
+ *   1. Re-validates the OpenID assertion directly with Steam (check_authentication mode)
+ *      to confirm the redirect was not forged.
+ *   2. Fetches the player's public profile (display name and avatar) via the Steam Web API.
+ * On success it sets an HMAC-signed session cookie (base64 payload + SHA-256 signature)
+ * and redirects the user back to the app. A short-form username is generated as a fallback
+ * when the Steam API key is absent or the profile fetch fails.
+ */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createHmac } from 'crypto';
 const STEAM_OPENID_URL = 'https://steamcommunity.com/openid/login';
 
+/* Build the signed cookie value: base64(JSON) + "." + HMAC-SHA256(base64(JSON)).
+   The signature lets /api/auth/me verify the cookie was issued by this server. */
 function buildCookieValue(userData: object, secret: string): string {
   const json = JSON.stringify(userData);
   const encoded = Buffer.from(json).toString('base64');
@@ -14,7 +26,7 @@ function buildCookieValue(userData: object, secret: string): string {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const query = req.query as Record<string, string>;
 
-  // Verify OpenID assertion with Steam
+  // Step 1: Re-verify the OpenID assertion with Steam to prevent replay/forgery attacks.
   const verifyParams = new URLSearchParams(query);
   verifyParams.set('openid.mode', 'check_authentication');
 
@@ -46,7 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   const steamId = steamIdMatch[1];
 
-  // Fetch public profile from Steam Web API
+  // Step 2: Fetch the public profile. Fall back to a derived username if unavailable.
   let username = `SteamUser${steamId.slice(-4)}`;
   let avatarUrl = '';
   const apiKey = process.env.STEAM_API_KEY ?? '';
@@ -71,7 +83,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const secret = process.env.AUTH_SECRET;
   if (!secret) {
     console.error('AUTH_SECRET environment variable is not set');
-    res.status(500).send('Server misconfiguration');
+    res.status(500).send('Authentication service is not configured');
     return;
   }
   const cookieValue = buildCookieValue({ steamId, username, avatarUrl }, secret);

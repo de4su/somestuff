@@ -1,3 +1,10 @@
+/*
+ * /api/auth/me — Session validation endpoint.
+ * Reads the signed "steamUser" cookie set during Steam login and returns the decoded
+ * user object if the HMAC signature is valid, or null if the session is absent/invalid.
+ * Returning null (200) instead of 401 keeps the client logic simple: the frontend
+ * always receives a JSON body it can check without handling error status codes.
+ */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createHmac } from 'crypto';
 
@@ -13,6 +20,8 @@ function parseCookies(cookieHeader: string): Record<string, string> {
   return cookies;
 }
 
+/* Verify the HMAC-SHA256 signature appended to the cookie value.
+   This prevents clients from forging a session by tampering with the base64 payload. */
 function verifyCookieSig(encoded: string, sig: string, secret: string): boolean {
   const hmac = createHmac('sha256', secret);
   hmac.update(encoded);
@@ -39,7 +48,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   const secret = process.env.AUTH_SECRET;
   if (!secret) {
     console.error('AUTH_SECRET environment variable is not set');
-    res.status(500).send('Server misconfiguration');
+    res.status(500).send('Authentication service is not configured');
     return;
   }
 
@@ -55,5 +64,3 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     res.status(200).json(null);
   }
 }
-
-
