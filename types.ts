@@ -1,3 +1,11 @@
+// ── Auth types ───────────────────────────────────────────────────────────────
+
+export interface SteamUser {
+  steamId: string;
+  username: string;
+  avatarUrl: string;
+}
+
 // ── RAWG API types ──────────────────────────────────────────────────────────
 
 export interface RawgGame {
@@ -91,4 +99,15 @@ export interface QuizAccuracy {
 export interface RecommendationResponse {
   recommendations: GameRecommendation[];
   accuracy: QuizAccuracy;
+}
+
+// ── Quiz history (Supabase) ──────────────────────────────────────────────────
+
+export interface QuizResultRecord {
+  id: string;
+  steam_id: string;
+  answers_hash: string;
+  answers: QuizAnswers;
+  results: RecommendationResponse;
+  created_at: string;
 }

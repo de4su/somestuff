@@ -1,5 +1,18 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { QuizAnswers, RecommendationResponse, GameRecommendation } from "../types";
+import { supabase } from "./supabaseClient";
+
+/** Stable deterministic hash for quiz answers (used as Supabase cache key). */
+function hashAnswers(answers: QuizAnswers): string {
+  const normalized = {
+    genres: [...answers.preferredGenres].sort().join(','),
+    playstyle: answers.playstyle,
+    time: answers.timeAvailability,
+    keywords: answers.specificKeywords.trim().toLowerCase(),
+    difficulty: answers.difficultyPreference,
+  };
+  return btoa(JSON.stringify(normalized));
+}
 
 const GAME_SCHEMA = {
   type: Type.OBJECT,
@@ -137,10 +150,29 @@ const fetchGGDealsInfo = async (steamAppId: string, title: string) => {
   return { cheapestPrice, dealUrl };
 };
 
-export const getGameRecommendations = async (answers: QuizAnswers): Promise<RecommendationResponse> => {
+export const getGameRecommendations = async (answers: QuizAnswers, steamId?: string): Promise<RecommendationResponse> => {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
   if (!apiKey) {
     throw new Error("API key missing. Set VITE_GEMINI_API_KEY in your environment variables.");
+  }
+
+  // ── Supabase cache lookup ────────────────────────────────────────────────
+  const answersHash = hashAnswers(answers);
+  if (steamId) {
+    try {
+      const { data: cached } = await supabase
+        .from('quiz_results')
+        .select('results')
+        .eq('steam_id', steamId)
+        .eq('answers_hash', answersHash)
+        .maybeSingle();
+      if (cached?.results) {
+        console.log('✅ Returning cached quiz result from Supabase');
+        return cached.results as RecommendationResponse;
+      }
+    } catch (cacheErr) {
+      console.warn('Supabase cache lookup failed, proceeding with Gemini:', cacheErr);
+    }
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -204,10 +236,26 @@ export const getGameRecommendations = async (answers: QuizAnswers): Promise<Reco
       enrichedGames.push(game);
     }
 
-    return {
+    const finalResult: RecommendationResponse = {
       recommendations: enrichedGames,
       accuracy: parsed.accuracy || { percentage: 0, reasoning: "Evaluation failed." }
     };
+
+    // ── Supabase cache write ────────────────────────────────────────────────
+    if (steamId) {
+      try {
+        await supabase.from('quiz_results').upsert({
+          steam_id: steamId,
+          answers_hash: answersHash,
+          answers,
+          results: finalResult,
+        }, { onConflict: 'steam_id,answers_hash' });
+      } catch (cacheWriteErr) {
+        console.warn('Supabase cache write failed:', cacheWriteErr);
+      }
+    }
+
+    return finalResult;
   } catch (err) {
     console.error("Gemini Service Failure:", err);
     throw err;
