@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { QuizAnswers, RecommendationResponse, RawgGame, Suggestion } from './types';
+import React, { useState, useCallback, useEffect } from 'react';
+import { QuizAnswers, RecommendationResponse, RawgGame, Suggestion, SteamUser } from './types';
 import { getGameRecommendations, searchSpecificGame } from './services/geminiService';
 import {
   searchGames,
@@ -11,14 +11,17 @@ import GameCard from './components/GameCard';
 import HexBackground from './components/HexBackground';
 import SearchAutocomplete from './components/SearchAutocomplete';
 import RawgGameCard from './components/RawgGameCard';
+import LoginButton from './components/LoginButton';
+import ProfilePage from './components/ProfilePage';
 
-type AppView = 'welcome' | 'quiz' | 'loading' | 'results' | 'rawg';
+type AppView = 'welcome' | 'quiz' | 'loading' | 'results' | 'rawg' | 'profile';
 type RawgMode = 'search' | 'developer' | 'publisher';
 
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>('welcome');
   const [results, setResults] = useState<RecommendationResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [steamUser, setSteamUser] = useState<SteamUser | null>(null);
 
   // RAWG results state
   const [rawgGames, setRawgGames] = useState<RawgGame[]>([]);
@@ -29,16 +32,40 @@ const App: React.FC = () => {
   const [rawgEntityId, setRawgEntityId] = useState<number | null>(null);
   const [rawgLoadingMore, setRawgLoadingMore] = useState(false);
 
+  // ── Steam auth ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((user: SteamUser | null) => {
+        if (user?.steamId) setSteamUser(user);
+      })
+      .catch(() => {/* not critical */});
+
+    // Clear ?loggedIn=1 from URL after redirect-back from Steam
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('loggedIn')) {
+      url.searchParams.delete('loggedIn');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    setSteamUser(null);
+    if (view === 'profile') setView('welcome');
+  }, [view]);
+
   const handleQuizComplete = async (answers: QuizAnswers) => {
     setView('loading');
     setError(null);
     try {
-      const data = await getGameRecommendations(answers);
+      const data = await getGameRecommendations(answers, steamUser?.steamId);
       setResults(data);
       setView('results');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || 'Connection to the Steam archives lost. Check your API key.');
+      const message = err instanceof Error ? err.message : 'Connection to the Steam archives lost. Check your API key.';
+      setError(message);
       setView('welcome');
     }
   };
@@ -138,6 +165,11 @@ const App: React.FC = () => {
               <span className="text-blue-400 group-hover:text-white transition-colors">QUEST</span>
             </div>
             <SearchAutocomplete onSelect={handleSuggestionSelect} />
+            <LoginButton
+              user={steamUser}
+              onProfileClick={() => setView('profile')}
+              onLogout={handleLogout}
+            />
           </div>
         </nav>
 
@@ -251,6 +283,10 @@ const App: React.FC = () => {
             <div className="w-full pointer-events-auto">
               <Quiz onComplete={handleQuizComplete} />
             </div>
+          )}
+
+          {view === 'profile' && steamUser && (
+            <ProfilePage user={steamUser} onBack={() => setView('welcome')} />
           )}
         </main>
       </div>
