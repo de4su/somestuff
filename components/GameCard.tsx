@@ -1,15 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { GameRecommendation } from '../types';
+import { GameRecommendation, SteamUser } from '../types';
+import FavoriteButton from './FavoriteButton';
 
 interface GameCardProps {
   game: GameRecommendation;
+  user?: SteamUser | null;
 }
 
 interface SteamMedia {
   screenshots: string[];
 }
 
-const GameCard: React.FC<GameCardProps> = ({ game }) => {
+const GameCard: React.FC<GameCardProps> = ({ game, user }) => {
   const [isHovered, setIsHovered] = useState(false);
 
   const [media, setMedia] = useState<SteamMedia>({
@@ -141,6 +143,14 @@ const GameCard: React.FC<GameCardProps> = ({ game }) => {
           <h3 className="text-xl font-black text-white group-hover:text-blue-400 transition-colors line-clamp-2 uppercase tracking-tight flex-1">
             {game.title}
           </h3>
+          <FavoriteButton
+            user={user ?? null}
+            gameId={game.steamAppId}
+            gameSource="steam"
+            gameTitle={game.title}
+            gameImage={game.imageUrl ?? null}
+            gameData={game}
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-px bg-white/5 border border-white/5 rounded-xl overflow-hidden mb-6">

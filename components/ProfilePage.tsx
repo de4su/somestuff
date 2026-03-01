@@ -1,11 +1,14 @@
 /*
- * ProfilePage — Displays a logged-in user's quiz history fetched from Supabase.
+ * ProfilePage — Displays a logged-in user's quiz history and favorites fetched from Supabase.
  * Results are ordered newest-first and rendered as an accordion so the page stays
  * scannable; clicking a row expands the full game list for that session.
  */
 import React, { useEffect, useState } from 'react';
-import { SteamUser, QuizResultRecord } from '../types';
+import { SteamUser, QuizResultRecord, FavoriteGame } from '../types';
 import { supabase } from '../services/supabaseClient';
+import { getFavorites, removeFavorite } from '../services/favoritesService';
+
+type ProfileTab = 'history' | 'favorites';
 
 interface ProfilePageProps {
   user: SteamUser;
@@ -13,32 +16,48 @@ interface ProfilePageProps {
 }
 
 const ProfilePage: React.FC<ProfilePageProps> = ({ user, onBack }) => {
+  const [tab, setTab] = useState<ProfileTab>('history');
   const [history, setHistory] = useState<QuizResultRecord[]>([]);
+  const [favorites, setFavorites] = useState<FavoriteGame[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchHistory() {
+    async function fetchData() {
       try {
-        const { data, error: fetchError } = await supabase
-          .from('quiz_results')
-          .select('*')
-          .eq('steam_id', user.steamId)
-          .order('created_at', { ascending: false });
+        const [{ data, error: fetchError }, favs] = await Promise.all([
+          supabase
+            .from('quiz_results')
+            .select('*')
+            .eq('steam_id', user.steamId)
+            .order('created_at', { ascending: false }),
+          getFavorites(user.steamId),
+        ]);
 
         if (fetchError) throw fetchError;
         setHistory((data as QuizResultRecord[]) ?? []);
+        setFavorites(favs);
       } catch (err: unknown) {
-        console.error('Failed to fetch quiz history:', err);
-        setError('Failed to load quiz history. Please try again.');
+        console.error('Failed to fetch profile data:', err);
+        setError('Failed to load profile data. Please try again.');
       } finally {
         setLoading(false);
       }
     }
 
-    fetchHistory();
+    fetchData();
   }, [user.steamId]);
+
+  const handleRemoveFavorite = async (fav: FavoriteGame) => {
+    if (!window.confirm(`Remove "${fav.game_title}" from favorites?`)) return;
+    try {
+      await removeFavorite(user.steamId, fav.game_id, fav.game_source);
+      setFavorites((prev) => prev.filter((f) => f.id !== fav.id));
+    } catch (err) {
+      console.error('Failed to remove favorite:', err);
+    }
+  };
 
   return (
     <div className="animate-results w-full max-w-4xl mx-auto pointer-events-auto">
@@ -59,7 +78,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onBack }) => {
           <h2 className="text-3xl font-black text-white uppercase tracking-tight mb-1">{user.username}</h2>
           <p className="text-gray-500 text-sm font-mono">Steam ID: {user.steamId}</p>
           <p className="text-blue-400 text-sm mt-2 font-semibold">
-            {history.length} quiz result{history.length !== 1 ? 's' : ''} saved
+            {history.length} quiz result{history.length !== 1 ? 's' : ''} &bull; {favorites.length} favorite{favorites.length !== 1 ? 's' : ''}
           </p>
         </div>
         <button
@@ -67,6 +86,30 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onBack }) => {
           className="md:ml-auto px-6 py-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-full transition-all text-xs font-black tracking-widest uppercase border border-white/5"
         >
           &larr; Back
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => setTab('history')}
+          className={`px-5 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all border ${
+            tab === 'history'
+              ? 'bg-blue-600 border-blue-500 text-white'
+              : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'
+          }`}
+        >
+          Quiz History
+        </button>
+        <button
+          onClick={() => setTab('favorites')}
+          className={`px-5 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all border ${
+            tab === 'favorites'
+              ? 'bg-blue-600 border-blue-500 text-white'
+              : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'
+          }`}
+        >
+          Favorites {favorites.length > 0 && `(${favorites.length})`}
         </button>
       </div>
 
@@ -84,14 +127,14 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onBack }) => {
         </div>
       )}
 
-      {!loading && !error && history.length === 0 && (
+      {!loading && !error && tab === 'history' && history.length === 0 && (
         <div className="py-20 text-center">
           <p className="text-gray-600 font-black uppercase tracking-widest text-sm">No quiz results yet.</p>
           <p className="text-gray-700 text-xs mt-2">Complete a quiz to see your history here.</p>
         </div>
       )}
 
-      {!loading && !error && history.length > 0 && (
+      {!loading && !error && tab === 'history' && history.length > 0 && (
         <div className="space-y-4">
           {history.map((record) => {
             const date = new Date(record.created_at).toLocaleDateString(undefined, {
@@ -152,6 +195,45 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onBack }) => {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {!loading && !error && tab === 'favorites' && favorites.length === 0 && (
+        <div className="py-20 text-center">
+          <p className="text-gray-600 font-black uppercase tracking-widest text-sm">No favorites yet.</p>
+          <p className="text-gray-700 text-xs mt-2">Click the heart icon on any game card to save it here.</p>
+        </div>
+      )}
+
+      {!loading && !error && tab === 'favorites' && favorites.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {favorites.map((fav) => (
+            <div
+              key={fav.id}
+              className="steam-card rounded-xl overflow-hidden shadow-xl flex flex-col group"
+            >
+              {fav.game_image && (
+                <img
+                  src={fav.game_image}
+                  alt={fav.game_title}
+                  className="w-full h-32 object-cover"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+              )}
+              <div className="p-4 flex flex-col flex-grow">
+                <p className="text-white text-sm font-black uppercase tracking-tight line-clamp-2 mb-1 group-hover:text-blue-400 transition-colors">
+                  {fav.game_title}
+                </p>
+                <p className="text-gray-600 text-[10px] uppercase tracking-widest mb-3">{fav.game_source}</p>
+                <button
+                  onClick={() => handleRemoveFavorite(fav)}
+                  className="mt-auto text-[10px] font-black uppercase tracking-widest text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 rounded-lg py-1.5 transition-all"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

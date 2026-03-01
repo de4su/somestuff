@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { RawgGame } from '../types';
+import { RawgGame, SteamUser } from '../types';
 import { getGameScreenshots } from '../services/rawgService';
+import FavoriteButton from './FavoriteButton';
 
 interface RawgGameCardProps {
   game: RawgGame;
   onClick?: (game: RawgGame) => void;
+  user?: SteamUser | null;
 }
 
 // Map RAWG parent platform slugs to display labels
@@ -25,7 +27,7 @@ const PLATFORM_LABELS: Record<string, string> = {
   web: 'Web',
 };
 
-const RawgGameCard: React.FC<RawgGameCardProps> = ({ game, onClick }) => {
+const RawgGameCard: React.FC<RawgGameCardProps> = ({ game, onClick, user }) => {
   const ratingColor =
     game.rating >= 4 ? 'text-green-400' : game.rating >= 3 ? 'text-blue-400' : 'text-yellow-400';
 
@@ -132,6 +134,16 @@ const RawgGameCard: React.FC<RawgGameCardProps> = ({ game, onClick }) => {
         <div className="flex items-center gap-2 mb-3">
           <span className={`text-sm font-bold ${ratingColor}`}>★ {game.rating.toFixed(1)}</span>
           <span className="text-xs text-gray-600">({game.ratings_count.toLocaleString()} ratings)</span>
+          <div className="ml-auto">
+            <FavoriteButton
+              user={user ?? null}
+              gameId={String(game.id)}
+              gameSource="rawg"
+              gameTitle={game.name}
+              gameImage={game.background_image}
+              gameData={game}
+            />
+          </div>
         </div>
 
         {game.genres && game.genres.length > 0 && (

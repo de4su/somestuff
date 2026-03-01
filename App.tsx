@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { QuizAnswers, RecommendationResponse, RawgGame, Suggestion, SteamUser } from './types';
+import { QuizAnswers, RecommendationResponse, RawgGame, Suggestion, SteamUser, GameFilters } from './types';
 import { getGameRecommendations, searchSpecificGame } from './services/geminiService';
 import {
-  searchGames,
+  searchGamesWithFilters,
   getGamesByDeveloper,
   getGamesByPublisher,
 } from './services/rawgService';
@@ -13,6 +13,7 @@ import SearchAutocomplete from './components/SearchAutocomplete';
 import RawgGameCard from './components/RawgGameCard';
 import LoginButton from './components/LoginButton';
 import ProfilePage from './components/ProfilePage';
+import SearchFilters from './components/SearchFilters';
 
 type AppView = 'welcome' | 'quiz' | 'loading' | 'results' | 'rawg' | 'profile';
 type RawgMode = 'search' | 'developer' | 'publisher';
@@ -31,6 +32,11 @@ const App: React.FC = () => {
   const [rawgTotal, setRawgTotal] = useState(0);
   const [rawgEntityId, setRawgEntityId] = useState<number | null>(null);
   const [rawgLoadingMore, setRawgLoadingMore] = useState(false);
+
+  // Search filter state
+  const [searchFilters, setSearchFilters] = useState<GameFilters>({});
+  const [currentSearchQuery, setCurrentSearchQuery] = useState<string>('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Check for an existing Steam session on mount and clean up the OAuth redirect parameter.
   // Steam OpenID redirects back with ?loggedIn=1 after a successful login; we strip it
@@ -75,19 +81,24 @@ const App: React.FC = () => {
   const handleSuggestionSelect = useCallback(async (suggestion: Suggestion) => {
     setView('loading');
     setError(null);
+    setSearchFilters({});
+    setFiltersOpen(false);
     try {
       let res;
       if (suggestion.kind === 'game') {
-        res = await searchGames(suggestion.name, 1, 20);
+        setCurrentSearchQuery(suggestion.name);
+        res = await searchGamesWithFilters(suggestion.name, {});
         setRawgMode('search');
         setRawgLabel(`Search: ${suggestion.name}`);
         setRawgEntityId(null);
       } else if (suggestion.kind === 'developer') {
+        setCurrentSearchQuery(suggestion.name);
         res = await getGamesByDeveloper(suggestion.id, 1, 20);
         setRawgMode('developer');
         setRawgLabel(`Developer: ${suggestion.name}`);
         setRawgEntityId(suggestion.id);
       } else {
+        setCurrentSearchQuery(suggestion.name);
         res = await getGamesByPublisher(suggestion.id, 1, 20);
         setRawgMode('publisher');
         setRawgLabel(`Publisher: ${suggestion.name}`);
@@ -104,14 +115,29 @@ const App: React.FC = () => {
     }
   }, []);
 
+  const handleFiltersChange = useCallback(async (newFilters: GameFilters) => {
+    setSearchFilters(newFilters);
+    setView('loading');
+    try {
+      const res = await searchGamesWithFilters(currentSearchQuery, newFilters);
+      setRawgGames(res.results);
+      setRawgTotal(res.count);
+      setRawgPage(1);
+      setView('rawg');
+    } catch (err) {
+      console.error(err);
+      setError('Filter update failed.');
+      setView('rawg');
+    }
+  }, [currentSearchQuery]);
+
   const handleLoadMore = useCallback(async () => {
     const nextPage = rawgPage + 1;
     setRawgLoadingMore(true);
     try {
       let res;
       if (rawgMode === 'search') {
-        const query = rawgLabel.replace(/^Search: /, '');
-        res = await searchGames(query, nextPage, 20);
+        res = await searchGamesWithFilters(currentSearchQuery, { ...searchFilters, page: nextPage });
       } else if (rawgMode === 'developer' && rawgEntityId !== null) {
         res = await getGamesByDeveloper(rawgEntityId, nextPage, 20);
       } else if (rawgMode === 'publisher' && rawgEntityId !== null) {
@@ -126,7 +152,7 @@ const App: React.FC = () => {
     } finally {
       setRawgLoadingMore(false);
     }
-  }, [rawgPage, rawgMode, rawgLabel, rawgEntityId]);
+  }, [rawgPage, rawgMode, currentSearchQuery, rawgEntityId, searchFilters]);
 
   const handleRawgGameClick = useCallback(async (rawgGame: RawgGame) => {
     setView('loading');
@@ -222,7 +248,7 @@ const App: React.FC = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {results.recommendations.map((game, idx) => (
-                  <GameCard key={game.id || idx} game={game} />
+                  <GameCard key={game.id || idx} game={game} user={steamUser} />
                 ))}
               </div>
 
@@ -240,9 +266,19 @@ const App: React.FC = () => {
           {view === 'rawg' && (
             <div className="animate-results w-full pointer-events-auto">
               <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                  <h2 className="text-2xl font-black text-white uppercase tracking-tight">{rawgLabel}</h2>
-                  <p className="text-gray-500 text-sm mt-1">{rawgTotal.toLocaleString()} results found</p>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div>
+                    <h2 className="text-2xl font-black text-white uppercase tracking-tight">{rawgLabel}</h2>
+                    <p className="text-gray-500 text-sm mt-1">{rawgTotal.toLocaleString()} results found</p>
+                  </div>
+                  {rawgMode === 'search' && (
+                    <SearchFilters
+                      filters={searchFilters}
+                      onChange={handleFiltersChange}
+                      isOpen={filtersOpen}
+                      onToggle={() => setFiltersOpen(!filtersOpen)}
+                    />
+                  )}
                 </div>
                 <button
                   onClick={() => setView('welcome')}
@@ -254,7 +290,7 @@ const App: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {rawgGames.map((game) => (
-                  <RawgGameCard key={game.id} game={game} onClick={handleRawgGameClick} />
+                  <RawgGameCard key={game.id} game={game} onClick={handleRawgGameClick} user={steamUser} />
                 ))}
               </div>
 

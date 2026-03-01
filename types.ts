@@ -101,6 +101,30 @@ export interface RecommendationResponse {
   accuracy: QuizAccuracy;
 }
 
+// Search filter types
+
+export interface GameFilters {
+  platforms?: number[];
+  genres?: number[];
+  metacriticMin?: number;
+  ordering?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+// Favorites / wishlist types
+
+export interface FavoriteGame {
+  id: string;
+  steam_id: string;
+  game_id: string;
+  game_source: 'steam' | 'rawg';
+  game_title: string;
+  game_image: string | null;
+  game_data: GameRecommendation | RawgGame;
+  created_at: string;
+}
+
 // Quiz history — persisted in Supabase keyed by (steam_id, answers_hash) so identical
 // quiz submissions are deduplicated and served from cache rather than re-querying Gemini.
 
