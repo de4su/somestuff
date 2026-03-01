@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { GameFilters } from '../types';
+import { GameFilters, RawgGame } from '../types';
 import { fetchPlatforms, fetchGenres } from '../services/rawgService';
 
 interface FilterOption {
@@ -13,6 +13,7 @@ interface SearchFiltersProps {
   onChange: (filters: GameFilters) => void;
   isOpen: boolean;
   onToggle: () => void;
+  currentGames: RawgGame[];
 }
 
 const ORDERING_OPTIONS = [
@@ -25,9 +26,45 @@ const ORDERING_OPTIONS = [
   { value: '-added', label: 'Most Added' },
 ];
 
-const SearchFilters: React.FC<SearchFiltersProps> = ({ filters, onChange, isOpen, onToggle }) => {
+const SearchFilters: React.FC<SearchFiltersProps> = ({ filters, onChange, isOpen, onToggle, currentGames }) => {
   const [platforms, setPlatforms] = useState<FilterOption[]>([]);
   const [genres, setGenres] = useState<FilterOption[]>([]);
+
+  const availablePlatformIds = React.useMemo(() => {
+    const ids = new Set<number>();
+    currentGames.forEach(game => {
+      game.parent_platforms?.forEach(pp => ids.add(pp.platform.id));
+    });
+    return ids;
+  }, [currentGames]);
+
+  const availableGenreIds = React.useMemo(() => {
+    const ids = new Set<number>();
+    currentGames.forEach(game => {
+      game.genres?.forEach(g => ids.add(g.id));
+    });
+    return ids;
+  }, [currentGames]);
+
+  const platformCounts = React.useMemo(() => {
+    const counts = new Map<number, number>();
+    currentGames.forEach(game => {
+      game.parent_platforms?.forEach(pp => {
+        counts.set(pp.platform.id, (counts.get(pp.platform.id) ?? 0) + 1);
+      });
+    });
+    return counts;
+  }, [currentGames]);
+
+  const genreCounts = React.useMemo(() => {
+    const counts = new Map<number, number>();
+    currentGames.forEach(game => {
+      game.genres?.forEach(g => {
+        counts.set(g.id, (counts.get(g.id) ?? 0) + 1);
+      });
+    });
+    return counts;
+  }, [currentGames]);
 
   useEffect(() => {
     fetchPlatforms()
@@ -71,17 +108,26 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({ filters, onChange, isOpen
               <div className="flex flex-wrap gap-1.5">
                 {platforms.slice(0, 12).map((p) => {
                   const active = filters.platforms?.includes(p.id);
+                  const available = availablePlatformIds.size === 0 || availablePlatformIds.has(p.id);
+                  const count = platformCounts.get(p.id) ?? 0;
                   return (
                     <button
                       key={p.id}
-                      onClick={() => onChange({ ...filters, platforms: toggleId(filters.platforms, p.id) })}
+                      onClick={() => available && onChange({ ...filters, platforms: toggleId(filters.platforms, p.id) })}
+                      disabled={!available}
                       className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-full border transition-all ${
                         active
                           ? 'bg-blue-600/30 border-blue-500/50 text-blue-300'
-                          : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20 hover:text-white'
+                          : available
+                            ? 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20 hover:text-white cursor-pointer'
+                            : 'bg-white/5 border-white/5 text-gray-700 cursor-not-allowed opacity-40'
                       }`}
+                      title={available ? `${count} games` : 'No games available'}
                     >
                       {p.name}
+                      {available && count > 0 && (
+                        <span className="ml-1 text-[8px] opacity-60">({count})</span>
+                      )}
                     </button>
                   );
                 })}
@@ -96,17 +142,26 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({ filters, onChange, isOpen
               <div className="flex flex-wrap gap-1.5">
                 {genres.slice(0, 12).map((g) => {
                   const active = filters.genres?.includes(g.id);
+                  const available = availableGenreIds.size === 0 || availableGenreIds.has(g.id);
+                  const count = genreCounts.get(g.id) ?? 0;
                   return (
                     <button
                       key={g.id}
-                      onClick={() => onChange({ ...filters, genres: toggleId(filters.genres, g.id) })}
+                      onClick={() => available && onChange({ ...filters, genres: toggleId(filters.genres, g.id) })}
+                      disabled={!available}
                       className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-full border transition-all ${
                         active
                           ? 'bg-blue-600/30 border-blue-500/50 text-blue-300'
-                          : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20 hover:text-white'
+                          : available
+                            ? 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20 hover:text-white cursor-pointer'
+                            : 'bg-white/5 border-white/5 text-gray-700 cursor-not-allowed opacity-40'
                       }`}
+                      title={available ? `${count} games` : 'No games available'}
                     >
                       {g.name}
+                      {available && count > 0 && (
+                        <span className="ml-1 text-[8px] opacity-60">({count})</span>
+                      )}
                     </button>
                   );
                 })}

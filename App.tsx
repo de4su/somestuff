@@ -280,11 +280,12 @@ const App: React.FC = () => {
                 </div>
                 <div className="flex gap-4 shrink-0">
                   <SearchFilters
-                    filters={searchFilters}
-                    onChange={handleFilterChange}
-                    isOpen={filtersOpen}
-                    onToggle={() => setFiltersOpen(!filtersOpen)}
-                  />
+                      filters={searchFilters}
+                      onChange={handleFilterChange}
+                      isOpen={filtersOpen}
+                      onToggle={() => setFiltersOpen(!filtersOpen)}
+                      currentGames={rawgGames}
+                    />
                   <button
                     onClick={() => setView('welcome')}
                     className="px-6 py-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-full transition-all text-xs font-black tracking-widest uppercase border border-white/5 backdrop-blur-xl"
