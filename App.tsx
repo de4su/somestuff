@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { QuizAnswers, RecommendationResponse, RawgGame, Suggestion, SteamUser } from './types';
+import { QuizAnswers, RecommendationResponse, RawgGame, Suggestion, SteamUser, GameFilters } from './types';
 import { getGameRecommendations, searchSpecificGame } from './services/geminiService';
 import {
   searchGames,
+  searchGamesWithFilters,
   getGamesByDeveloper,
   getGamesByPublisher,
 } from './services/rawgService';
@@ -10,6 +11,7 @@ import Quiz from './components/Quiz';
 import GameCard from './components/GameCard';
 import HexBackground from './components/HexBackground';
 import SearchAutocomplete from './components/SearchAutocomplete';
+import SearchFilters from './components/SearchFilters';
 import RawgGameCard from './components/RawgGameCard';
 import LoginButton from './components/LoginButton';
 import ProfilePage from './components/ProfilePage';
@@ -31,6 +33,10 @@ const App: React.FC = () => {
   const [rawgTotal, setRawgTotal] = useState(0);
   const [rawgEntityId, setRawgEntityId] = useState<number | null>(null);
   const [rawgLoadingMore, setRawgLoadingMore] = useState(false);
+
+  // Search filter state
+  const [searchFilters, setSearchFilters] = useState<GameFilters>({});
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Check for an existing Steam session on mount and clean up the OAuth redirect parameter.
   // Steam OpenID redirects back with ?loggedIn=1 after a successful login; we strip it
@@ -78,7 +84,7 @@ const App: React.FC = () => {
     try {
       let res;
       if (suggestion.kind === 'game') {
-        res = await searchGames(suggestion.name, 1, 20);
+        res = await searchGamesWithFilters(suggestion.name, searchFilters);
         setRawgMode('search');
         setRawgLabel(`Search: ${suggestion.name}`);
         setRawgEntityId(null);
@@ -102,7 +108,7 @@ const App: React.FC = () => {
       setError('Search failed. Please try again.');
       setView('welcome');
     }
-  }, []);
+  }, [searchFilters]);
 
   const handleLoadMore = useCallback(async () => {
     const nextPage = rawgPage + 1;
@@ -111,7 +117,7 @@ const App: React.FC = () => {
       let res;
       if (rawgMode === 'search') {
         const query = rawgLabel.replace(/^Search: /, '');
-        res = await searchGames(query, nextPage, 20);
+        res = await searchGamesWithFilters(query, { ...searchFilters, page: nextPage, pageSize: 20 });
       } else if (rawgMode === 'developer' && rawgEntityId !== null) {
         res = await getGamesByDeveloper(rawgEntityId, nextPage, 20);
       } else if (rawgMode === 'publisher' && rawgEntityId !== null) {
@@ -126,7 +132,7 @@ const App: React.FC = () => {
     } finally {
       setRawgLoadingMore(false);
     }
-  }, [rawgPage, rawgMode, rawgLabel, rawgEntityId]);
+  }, [rawgPage, rawgMode, rawgLabel, rawgEntityId, searchFilters]);
 
   const handleRawgGameClick = useCallback(async (rawgGame: RawgGame) => {
     setView('loading');
@@ -164,7 +170,15 @@ const App: React.FC = () => {
               <span className="bg-blue-600 px-2 py-0.5 rounded-sm group-hover:bg-blue-500 transition-colors">STEAM</span>
               <span className="text-blue-400 group-hover:text-white transition-colors">QUEST</span>
             </div>
-            <SearchAutocomplete onSelect={handleSuggestionSelect} />
+            <div className="flex items-center gap-3">
+              <SearchAutocomplete onSelect={handleSuggestionSelect} />
+              <SearchFilters
+                filters={searchFilters}
+                onChange={setSearchFilters}
+                isOpen={filtersOpen}
+                onToggle={() => setFiltersOpen((o) => !o)}
+              />
+            </div>
             <LoginButton
               user={steamUser}
               onProfileClick={() => setView('profile')}
@@ -222,7 +236,7 @@ const App: React.FC = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {results.recommendations.map((game, idx) => (
-                  <GameCard key={game.id || idx} game={game} />
+                  <GameCard key={game.id || idx} game={game} user={steamUser} />
                 ))}
               </div>
 
@@ -254,7 +268,7 @@ const App: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {rawgGames.map((game) => (
-                  <RawgGameCard key={game.id} game={game} onClick={handleRawgGameClick} />
+                  <RawgGameCard key={game.id} game={game} onClick={handleRawgGameClick} user={steamUser} />
                 ))}
               </div>
 

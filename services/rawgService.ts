@@ -4,6 +4,7 @@ import {
   RawgPublisher,
   RawgListResponse,
   RawgScreenshot,
+  GameFilters,
 } from '../types';
 
 const BASE_URL = 'https://api.rawg.io/api';
@@ -61,6 +62,60 @@ export async function searchGames(
     page,
     page_size: pageSize,
   });
+}
+
+export async function searchGamesWithFilters(
+  query: string,
+  filters: GameFilters = {},
+  signal?: AbortSignal,
+): Promise<RawgListResponse<RawgGame>> {
+  const params: Record<string, string | number> = {
+    search: query,
+    page: filters.page ?? 1,
+    page_size: filters.pageSize ?? 20,
+  };
+
+  if (filters.platforms && filters.platforms.length > 0) {
+    params.platforms = filters.platforms.join(',');
+  }
+  if (filters.genres && filters.genres.length > 0) {
+    params.genres = filters.genres.join(',');
+  }
+  if (filters.tags && filters.tags.length > 0) {
+    params.tags = filters.tags.join(',');
+  }
+  if (filters.metacriticMin !== undefined && filters.metacriticMin > 0) {
+    params.metacritic = `${filters.metacriticMin},100`;
+  }
+  if (filters.releaseDateGte) {
+    params.dates = `${filters.releaseDateGte},${filters.releaseDateLte ?? '2030-12-31'}`;
+  }
+  if (filters.ordering) {
+    params.ordering = filters.ordering;
+  }
+  if (filters.esrbRating && filters.esrbRating.length > 0) {
+    params.esrb_rating = filters.esrbRating.join(',');
+  }
+  if (filters.excludeAdditions) {
+    params.exclude_additions = 'true';
+  }
+  if (filters.excludeParents) {
+    params.exclude_parents = 'true';
+  }
+
+  return rawgFetch<RawgListResponse<RawgGame>>('/games', params, signal);
+}
+
+export async function fetchPlatforms(): Promise<RawgListResponse<{ id: number; name: string; slug: string }>> {
+  return rawgFetch('/platforms', { page_size: 50 });
+}
+
+export async function fetchGenres(): Promise<RawgListResponse<{ id: number; name: string; slug: string }>> {
+  return rawgFetch('/genres', { page_size: 50 });
+}
+
+export async function fetchTags(): Promise<RawgListResponse<{ id: number; name: string; slug: string }>> {
+  return rawgFetch('/tags', { page_size: 50 });
 }
 
 export async function searchDevelopers(
