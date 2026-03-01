@@ -123,9 +123,9 @@ const App: React.FC = () => {
       if (rawgMode === 'search') {
         res = await searchGamesWithFilters(currentSearchQuery, { ...searchFilters, page: nextPage });
       } else if (rawgMode === 'developer' && rawgEntityId !== null) {
-        res = await getGamesByDeveloper(rawgEntityId, nextPage, 20);
+        res = await getGamesByDeveloper(rawgEntityId, nextPage, 20, searchFilters);
       } else if (rawgMode === 'publisher' && rawgEntityId !== null) {
-        res = await getGamesByPublisher(rawgEntityId, nextPage, 20);
+        res = await getGamesByPublisher(rawgEntityId, nextPage, 20, searchFilters);
       } else {
         return;
       }
@@ -146,9 +146,9 @@ const App: React.FC = () => {
       if (rawgMode === 'search') {
         res = await searchGamesWithFilters(currentSearchQuery, newFilters);
       } else if (rawgMode === 'developer' && rawgEntityId !== null) {
-        res = await getGamesByDeveloper(rawgEntityId, 1, 20);
+        res = await getGamesByDeveloper(rawgEntityId, 1, 20, newFilters);
       } else if (rawgMode === 'publisher' && rawgEntityId !== null) {
-        res = await getGamesByPublisher(rawgEntityId, 1, 20);
+        res = await getGamesByPublisher(rawgEntityId, 1, 20, newFilters);
       }
       if (res) {
         setRawgGames(res.results);
@@ -279,14 +279,12 @@ const App: React.FC = () => {
                   <p className="text-gray-500 text-sm mt-1">{rawgTotal.toLocaleString()} results found</p>
                 </div>
                 <div className="flex gap-4 shrink-0">
-                  {rawgMode === 'search' && (
-                    <SearchFilters
-                      filters={searchFilters}
-                      onChange={handleFilterChange}
-                      isOpen={filtersOpen}
-                      onToggle={() => setFiltersOpen(!filtersOpen)}
-                    />
-                  )}
+                  <SearchFilters
+                    filters={searchFilters}
+                    onChange={handleFilterChange}
+                    isOpen={filtersOpen}
+                    onToggle={() => setFiltersOpen(!filtersOpen)}
+                  />
                   <button
                     onClick={() => setView('welcome')}
                     className="px-6 py-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-full transition-all text-xs font-black tracking-widest uppercase border border-white/5 backdrop-blur-xl"

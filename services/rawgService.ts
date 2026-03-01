@@ -86,28 +86,49 @@ export async function searchPublishers(
   );
 }
 
+function applyFilters(params: Record<string, string | number>, filters: GameFilters): void {
+  if (filters.platforms && filters.platforms.length > 0) {
+    params.platforms = filters.platforms.join(',');
+  }
+  if (filters.genres && filters.genres.length > 0) {
+    params.genres = filters.genres.join(',');
+  }
+  if (filters.metacriticMin !== undefined) {
+    params.metacritic = `${filters.metacriticMin},100`;
+  }
+  if (filters.ordering) {
+    params.ordering = filters.ordering;
+  }
+}
+
 export async function getGamesByDeveloper(
   developerId: number,
   page = 1,
   pageSize = 20,
+  filters: GameFilters = {},
 ): Promise<RawgListResponse<RawgGame>> {
-  return rawgFetch<RawgListResponse<RawgGame>>('/games', {
+  const params: Record<string, string | number> = {
     developers: developerId,
     page,
     page_size: pageSize,
-  });
+  };
+  applyFilters(params, filters);
+  return rawgFetch<RawgListResponse<RawgGame>>('/games', params);
 }
 
 export async function getGamesByPublisher(
   publisherId: number,
   page = 1,
   pageSize = 20,
+  filters: GameFilters = {},
 ): Promise<RawgListResponse<RawgGame>> {
-  return rawgFetch<RawgListResponse<RawgGame>>('/games', {
+  const params: Record<string, string | number> = {
     publishers: publisherId,
     page,
     page_size: pageSize,
-  });
+  };
+  applyFilters(params, filters);
+  return rawgFetch<RawgListResponse<RawgGame>>('/games', params);
 }
 
 export async function searchGamesWithFilters(
