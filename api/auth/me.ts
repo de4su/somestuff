@@ -39,7 +39,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   const secret = process.env.AUTH_SECRET;
   if (!secret) {
     console.error('AUTH_SECRET environment variable is not set');
-    res.status(500).send('Server misconfiguration');
+    res.status(500).send('Authentication configuration error');
     return;
   }
 

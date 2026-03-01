@@ -2,7 +2,6 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { QuizAnswers, RecommendationResponse, GameRecommendation } from "../types";
 import { supabase } from "./supabaseClient";
 
-/** Stable deterministic hash for quiz answers (used as Supabase cache key). */
 function hashAnswers(answers: QuizAnswers): string {
   const normalized = {
     genres: [...answers.preferredGenres].sort().join(','),
@@ -46,7 +45,6 @@ const GAME_SCHEMA = {
   required: ["recommendations", "accuracy"]
 };
 
-// Multiple CORS proxies as fallbacks
 const CORS_PROXIES = [
   (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
   (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
@@ -156,7 +154,6 @@ export const getGameRecommendations = async (answers: QuizAnswers, steamId?: str
     throw new Error("API key missing. Set VITE_GEMINI_API_KEY in your environment variables.");
   }
 
-  // ── Supabase cache lookup ────────────────────────────────────────────────
   const answersHash = hashAnswers(answers);
   if (steamId) {
     try {
@@ -231,7 +228,6 @@ export const getGameRecommendations = async (answers: QuizAnswers, steamId?: str
       game.steamPrice = steamDetails.steamPrice;
       game.cheapestPrice = ggDealsInfo.cheapestPrice;
       game.dealUrl = ggDealsInfo.dealUrl;
-      // Keep playtimes from Gemini (they're now in the schema)
       
       enrichedGames.push(game);
     }
@@ -241,7 +237,6 @@ export const getGameRecommendations = async (answers: QuizAnswers, steamId?: str
       accuracy: parsed.accuracy || { percentage: 0, reasoning: "Evaluation failed." }
     };
 
-    // ── Supabase cache write ────────────────────────────────────────────────
     if (steamId) {
       try {
         await supabase.from('quiz_results').upsert({
@@ -307,7 +302,6 @@ export const searchSpecificGame = async (query: string): Promise<GameRecommendat
   game.steamPrice = steamDetails.steamPrice;
   game.cheapestPrice = ggDealsInfo.cheapestPrice;
   game.dealUrl = ggDealsInfo.dealUrl;
-  // Keep playtimes from Gemini
   
   return game;
 };

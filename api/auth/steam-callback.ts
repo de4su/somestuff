@@ -14,7 +14,6 @@ function buildCookieValue(userData: object, secret: string): string {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const query = req.query as Record<string, string>;
 
-  // Verify OpenID assertion with Steam
   const verifyParams = new URLSearchParams(query);
   verifyParams.set('openid.mode', 'check_authentication');
 
@@ -37,7 +36,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  // Extract Steam ID from claimed_id (e.g. https://steamcommunity.com/openid/id/76561198XXXXXXXXX)
   const claimedId = query['openid.claimed_id'] ?? '';
   const steamIdMatch = claimedId.match(/\/(\d+)$/);
   if (!steamIdMatch) {
@@ -46,7 +44,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   const steamId = steamIdMatch[1];
 
-  // Fetch public profile from Steam Web API
   let username = `SteamUser${steamId.slice(-4)}`;
   let avatarUrl = '';
   const apiKey = process.env.STEAM_API_KEY ?? '';
@@ -71,7 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const secret = process.env.AUTH_SECRET;
   if (!secret) {
     console.error('AUTH_SECRET environment variable is not set');
-    res.status(500).send('Server misconfiguration');
+    res.status(500).send('Authentication configuration error');
     return;
   }
   const cookieValue = buildCookieValue({ steamId, username, avatarUrl }, secret);

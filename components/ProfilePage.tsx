@@ -37,7 +37,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onBack }) => {
 
   return (
     <div className="animate-results w-full max-w-4xl mx-auto pointer-events-auto">
-      {/* Header */}
       <div className="mb-10 p-8 steam-card rounded-2xl flex flex-col md:flex-row items-center md:items-start gap-6 shadow-2xl border-l-8 border-l-blue-600">
         {user.avatarUrl ? (
           <img
@@ -65,7 +64,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onBack }) => {
         </button>
       </div>
 
-      {/* Content */}
       {loading && (
         <div className="py-20 text-center flex flex-col items-center animate-pulse">
           <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
@@ -96,7 +94,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onBack }) => {
 
             return (
               <div key={record.id} className="steam-card rounded-xl overflow-hidden shadow-xl">
-                {/* Summary row */}
                 <button
                   className="w-full p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 text-left hover:bg-white/5 transition-colors"
                   onClick={() => setExpanded(isOpen ? null : record.id)}
@@ -117,7 +114,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, onBack }) => {
                   </div>
                 </button>
 
-                {/* Expanded game list */}
                 {isOpen && (
                   <div className="border-t border-white/5 p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {record.results.recommendations.map((game, idx) => (
