@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { GameFilters } from '../types';
-import { fetchPlatforms, fetchGenres } from '../services/rawgService';
+import { fetchPlatforms, fetchGenres, fetchTags } from '../services/rawgService';
 
 interface FilterOption {
   id: number;
@@ -15,6 +15,8 @@ interface SearchFiltersProps {
   onToggle: () => void;
 }
 
+const MAX_DISPLAYED_TAGS = 20;
+
 const ORDERING_OPTIONS = [
   { value: '', label: 'Relevance' },
   { value: '-rating', label: 'Rating (High → Low)' },
@@ -28,6 +30,7 @@ const ORDERING_OPTIONS = [
 const SearchFilters: React.FC<SearchFiltersProps> = ({ filters, onChange, isOpen, onToggle }) => {
   const [platforms, setPlatforms] = useState<FilterOption[]>([]);
   const [genres, setGenres] = useState<FilterOption[]>([]);
+  const [tags, setTags] = useState<FilterOption[]>([]);
 
   useEffect(() => {
     fetchPlatforms()
@@ -36,6 +39,9 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({ filters, onChange, isOpen
     fetchGenres()
       .then((res) => setGenres(res.results))
       .catch((err) => { console.error('Failed to fetch genres:', err); });
+    fetchTags()
+      .then((res) => setTags(res.results))
+      .catch((err) => { console.error('Failed to fetch tags:', err); });
   }, []);
 
   const toggleId = (current: number[] | undefined, id: number): number[] => {
@@ -46,6 +52,7 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({ filters, onChange, isOpen
   const hasActiveFilters =
     (filters.platforms && filters.platforms.length > 0) ||
     (filters.genres && filters.genres.length > 0) ||
+    (filters.tags && filters.tags.length > 0) ||
     filters.metacriticMin !== undefined ||
     (filters.ordering && filters.ordering !== '');
 
@@ -107,6 +114,31 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({ filters, onChange, isOpen
                       }`}
                     >
                       {g.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Tags */}
+          {tags.length > 0 && (
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 pb-2 border-b border-white/5">Tags</p>
+              <div className="flex flex-wrap gap-1.5">
+                {tags.slice(0, MAX_DISPLAYED_TAGS).map((t) => {
+                  const active = filters.tags?.includes(t.id);
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => onChange({ ...filters, tags: toggleId(filters.tags, t.id) })}
+                      className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-full border transition-all ${
+                        active
+                          ? 'bg-green-600/30 border-green-500/50 text-green-300'
+                          : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20 hover:text-white cursor-pointer'
+                      }`}
+                    >
+                      {t.name}
                     </button>
                   );
                 })}

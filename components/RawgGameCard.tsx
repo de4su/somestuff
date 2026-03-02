@@ -9,22 +9,45 @@ interface RawgGameCardProps {
   user?: SteamUser | null;
 }
 
-// Map RAWG parent platform slugs to display labels
-const PLATFORM_LABELS: Record<string, string> = {
-  pc: 'PC',
-  playstation: 'PlayStation',
-  xbox: 'Xbox',
-  nintendo: 'Nintendo',
-  ios: 'iOS',
-  android: 'Android',
-  mac: 'macOS',
-  linux: 'Linux',
-  atari: 'Atari',
-  'commodore-amiga': 'Amiga',
-  sega: 'SEGA',
-  '3do': '3DO',
-  'neo-geo': 'Neo Geo',
-  web: 'Web',
+// Map RAWG platform IDs to short display names
+const PLATFORM_DISPLAY_NAMES: Record<number, string> = {
+  // PC
+  4: 'PC',
+  // PlayStation
+  187: 'PS5',
+  18: 'PS4',
+  16: 'PS3',
+  15: 'PS2',
+  27: 'PS1',
+  19: 'PS Vita',
+  17: 'PSP',
+  // Xbox
+  186: 'Xbox Series X/S',
+  1: 'Xbox One',
+  14: 'Xbox 360',
+  80: 'Xbox',
+  // Nintendo
+  7: 'Switch',
+  10: 'Wii U',
+  11: 'Wii',
+  105: 'GameCube',
+  8: '3DS',
+  9: 'DS',
+  83: 'Game Boy',
+  // Mobile
+  3: 'iOS',
+  21: 'Android',
+  // Others
+  5: 'macOS',
+  6: 'Linux',
+  171: 'Web',
+};
+
+// Platform family grouping for condensing
+const PLATFORM_FAMILIES: Record<string, number[]> = {
+  PlayStation: [187, 18, 16, 15, 27, 19, 17],
+  Xbox: [186, 1, 14, 80],
+  Nintendo: [7, 10, 11, 105, 8, 9, 83],
 };
 
 const RawgGameCard: React.FC<RawgGameCardProps> = ({ game, onClick, user }) => {
@@ -73,11 +96,80 @@ const RawgGameCard: React.FC<RawgGameCardProps> = ({ game, onClick, user }) => {
     };
   }, [isHovered, imageUrls.length]);
 
-  const platforms = game.parent_platforms
-    ? game.parent_platforms.map(({ platform }) =>
-        PLATFORM_LABELS[platform.slug] ?? platform.name,
-      )
-    : [];
+  const platforms = React.useMemo(() => {
+    if (!game.platforms || game.platforms.length === 0) return [];
+
+    const platformsByFamily = new Map<string, Set<number>>();
+    const standalone: number[] = [];
+
+    game.platforms.forEach(({ platform }) => {
+      let foundFamily = false;
+      for (const [family, ids] of Object.entries(PLATFORM_FAMILIES)) {
+        if (ids.includes(platform.id)) {
+          if (!platformsByFamily.has(family)) {
+            platformsByFamily.set(family, new Set());
+          }
+          platformsByFamily.get(family)!.add(platform.id);
+          foundFamily = true;
+          break;
+        }
+      }
+      if (!foundFamily) {
+        standalone.push(platform.id);
+      }
+    });
+
+    const result: string[] = [];
+
+    for (const [family, platformIds] of platformsByFamily.entries()) {
+      const sortedIds = Array.from(platformIds).sort((a, b) => {
+        const familyIds = PLATFORM_FAMILIES[family];
+        return familyIds.indexOf(a) - familyIds.indexOf(b);
+      });
+
+      if (sortedIds.length === 1) {
+        result.push(PLATFORM_DISPLAY_NAMES[sortedIds[0]] || family);
+      } else {
+        const shortNames = sortedIds.map((id) => {
+          const name = PLATFORM_DISPLAY_NAMES[id];
+          if (!name) return '';
+          if (family === 'PlayStation') {
+            if (name === 'PS5') return '5';
+            if (name === 'PS4') return '4';
+            if (name === 'PS3') return '3';
+            if (name === 'PS2') return '2';
+            if (name === 'PS1') return '1';
+            if (name === 'PS Vita') return 'Vita';
+            if (name === 'PSP') return 'PSP';
+          } else if (family === 'Xbox') {
+            if (name === 'Xbox Series X/S') return 'Series X/S';
+            if (name === 'Xbox One') return 'One';
+            if (name === 'Xbox 360') return '360';
+            // Original Xbox has no generation suffix; omit from condensed label
+            if (name === 'Xbox') return '';
+          } else if (family === 'Nintendo') {
+            return name;
+          }
+          return name;
+        }).filter(Boolean);
+
+        if (family === 'PlayStation') {
+          result.push(`PS ${shortNames.join('/')}`);
+        } else if (family === 'Xbox') {
+          result.push(`Xbox ${shortNames.join('/')}`);
+        } else {
+          result.push(shortNames.join('/'));
+        }
+      }
+    }
+
+    standalone.forEach((id) => {
+      const name = PLATFORM_DISPLAY_NAMES[id];
+      if (name) result.push(name);
+    });
+
+    return result;
+  }, [game.platforms]);
 
   return (
     <div

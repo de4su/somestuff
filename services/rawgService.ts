@@ -129,6 +129,10 @@ export async function searchGamesWithFilters(
     params.genres = filters.genres.join(',');
   }
 
+  if (filters.tags && filters.tags.length > 0) {
+    params.tags = filters.tags.join(',');
+  }
+
   if (filters.metacriticMin !== undefined) {
     params.metacritic = `${filters.metacriticMin},100`;
   }
@@ -146,6 +150,10 @@ export async function fetchPlatforms(): Promise<RawgListResponse<{ id: number; n
 
 export async function fetchGenres(): Promise<RawgListResponse<{ id: number; name: string; slug: string }>> {
   return rawgFetch('/genres', { page_size: 50 });
+}
+
+export async function fetchTags(): Promise<RawgListResponse<{ id: number; name: string; slug: string }>> {
+  return rawgFetch('/tags', { page_size: 50 });
 }
 
 export async function getGameScreenshots(gameId: number): Promise<RawgScreenshot[]> {
