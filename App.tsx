@@ -284,6 +284,7 @@ const App: React.FC = () => {
                     onChange={handleFilterChange}
                     isOpen={filtersOpen}
                     onToggle={() => setFiltersOpen(!filtersOpen)}
+                    currentGames={rawgGames}
                   />
                   <button
                     onClick={() => setView('welcome')}

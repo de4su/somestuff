@@ -93,8 +93,8 @@ function applyFilters(params: Record<string, string | number>, filters: GameFilt
   if (filters.genres && filters.genres.length > 0) {
     params.genres = filters.genres.join(',');
   }
-  if (filters.metacriticMin !== undefined) {
-    params.metacritic = `${filters.metacriticMin},100`;
+  if (filters.tags && filters.tags.length > 0) {
+    params.tags = filters.tags.join(',');
   }
   if (filters.ordering) {
     params.ordering = filters.ordering;
@@ -150,8 +150,8 @@ export async function searchGamesWithFilters(
     params.genres = filters.genres.join(',');
   }
 
-  if (filters.metacriticMin !== undefined) {
-    params.metacritic = `${filters.metacriticMin},100`;
+  if (filters.tags && filters.tags.length > 0) {
+    params.tags = filters.tags.join(',');
   }
 
   if (filters.ordering) {
