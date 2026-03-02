@@ -17,6 +17,7 @@ export interface RawgGame {
   ratings_count: number;
   metacritic: number | null;
   genres: Array<{ id: number; name: string }>;
+  tags?: Array<{ id: number; name: string; slug: string }>;
   parent_platforms?: Array<{ platform: { id: number; name: string; slug: string } }>;
   platforms?: Array<{ platform: { id: number; name: string; slug: string } }>;
   developers?: Array<{ id: number; name: string; slug: string }>;
@@ -106,6 +107,7 @@ export interface RecommendationResponse {
 export interface GameFilters {
   platforms?: number[];
   genres?: number[];
+  tags?: number[];
   metacriticMin?: number;
   ordering?: string;
   page?: number;
