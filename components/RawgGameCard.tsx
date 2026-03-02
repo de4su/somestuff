@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { RawgGame, SteamUser } from '../types';
-import { getGameScreenshots } from '../services/rawgService';
+import { getGameScreenshots } from '../services/api/rawg/games';
 import FavoriteButton from './FavoriteButton';
 
 interface RawgGameCardProps {
