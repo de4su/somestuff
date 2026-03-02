@@ -5,7 +5,7 @@ import {
   searchGamesWithFilters,
   getGamesByDeveloper,
   getGamesByPublisher,
-} from './services/rawgService';
+} from './services/api/rawg/games';
 import Quiz from './components/Quiz';
 import GameCard from './components/GameCard';
 import HexBackground from './components/HexBackground';

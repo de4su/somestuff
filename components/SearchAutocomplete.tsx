@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Suggestion, SuggestionKind } from '../types';
-import { fetchSuggestions } from '../services/rawgService';
+import { fetchSuggestions } from '../services/api/rawg/search';
 
 interface Props {
   onSelect: (suggestion: Suggestion) => void;

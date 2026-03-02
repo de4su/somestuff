@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { GameFilters, RawgGame } from '../types';
-import { fetchPlatforms, fetchGenres } from '../services/rawgService';
+import { fetchPlatforms, fetchGenres } from '../services/api/rawg/filters';
 
 interface FilterOption {
   id: number;

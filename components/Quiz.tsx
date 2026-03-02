@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { QuizAnswers } from '../types.ts';
+import { QuizAnswers } from '../types';
 
 interface QuizProps {
   onComplete: (answers: QuizAnswers) => void;
